@@ -3,3418 +3,726 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مؤسسة أولاد الحسن الخيرية - استمارة معلومات الحالة</title>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- JsBarcode for barcode generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
-    <!-- SweetAlert2 for beautiful alerts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert2/11.4.8/sweetalert2.all.min.js"></script>
-    <!-- Datalist Polyfill for better autocomplete support -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/datalist-polyfill/1.24.4/datalist-polyfill.min.js"></script>
+    <title>استمارة معلومات الحالة - مؤسسة أولاد الحسن الخيرية</title>
     <style>
-        :root {
-            --primary-color: #3556ab;
-            --secondary-color: #f9d423;
-            --success-color: #2ecc71;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --dark-color: #2c3e50;
-            --light-color: #ecf0f1;
-            --gray-color: #bdc3c7;
-            --text-color: #333;
-            --sidebar-width: 250px;
-            --header-height: 60px;
-            --case-sayed-color: #27ae60;
-            --case-amm-color: #3498db;
-            --case-masareef-color: #f39c12;
+        @page {
+            size: A4 portrait;
+            margin: 0;
         }
         
         * {
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Arial', 'Tahoma', sans-serif;
-            margin: 0;
-            padding: 0;
+            font-family: 'Traditional Arabic', Arial, sans-serif;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
         
         body {
             margin: 0;
             padding: 0;
             background-color: #f5f5f5;
-            direction: rtl;
-            color: var(--text-color);
-            overflow-x: hidden;
+            font-size: 14px;
         }
         
-        /* Main Layout */
-        .app-container {
-            display: flex;
-            min-height: 100vh;
-        }
-        
-        .main-content {
-            flex: 1;
-            margin-right: var(--sidebar-width);
-            padding-top: var(--header-height);
-            transition: all 0.3s ease;
-        }
-        
-        .sidebar-collapsed .main-content {
-            margin-right: 60px;
-        }
-        
-        /* Header Styles */
-        .header {
-            position: fixed;
-            top: 0;
-            right: 0;
-            left: 0;
-            height: var(--header-height);
-            background-color: var(--primary-color);
-            color: white;
-            display: flex;
-            align-items: center;
-            padding: 0 1rem;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-right: var(--sidebar-width);
-            transition: all 0.3s ease;
-        }
-        
-        .sidebar-collapsed .header {
-            margin-right: 60px;
-        }
-        
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
-        
-        .header-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-        
-        .header-actions {
-            display: flex;
-            gap: 15px;
-        }
-        
-        .header-btn {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            padding: 5px 10px;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        
-        .header-btn:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        /* Sidebar Styles */
-        .sidebar {
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background-color: var(--dark-color);
-            color: white;
-            z-index: 1001;
-            transition: all 0.3s ease;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-            overflow-y: auto;
-        }
-        
-        .sidebar-collapsed .sidebar {
-            width: 60px;
-        }
-        
-        .sidebar-header {
-            display: flex;
-            align-items: center;
-            padding: 20px;
-            background-color: rgba(0, 0, 0, 0.2);
-            height: var(--header-height);
-        }
-        
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: var(--secondary-color);
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            margin-left: 10px;
-        }
-        
-        .logo-text {
-            transition: opacity 0.3s, visibility 0.3s;
-        }
-        
-        .sidebar-collapsed .logo-text {
-            opacity: 0;
-            visibility: hidden;
-            position: absolute;
-        }
-        
-        .sidebar-toggle {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        .sidebar-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .sidebar-menu {
-            padding: 20px 0;
-            list-style: none;
-        }
-        
-        .menu-item {
-            margin-bottom: 5px;
-        }
-        
-        .menu-link {
-            display: flex;
-            align-items: center;
-            padding: 12px 20px;
-            color: white;
-            text-decoration: none;
-            transition: background-color 0.3s;
-            border-right: 3px solid transparent;
-        }
-        
-        .menu-link:hover, .menu-link.active {
-            background-color: rgba(255, 255, 255, 0.1);
-            border-right-color: var(--secondary-color);
-        }
-        
-        .menu-icon {
-            font-size: 1.2rem;
-            width: 24px;
-            text-align: center;
-            margin-left: 10px;
-        }
-        
-        .menu-text {
-            transition: opacity 0.3s, visibility 0.3s;
-        }
-        
-        .sidebar-collapsed .menu-text {
-            opacity: 0;
-            visibility: hidden;
-            position: absolute;
-        }
-        
-        .sidebar-footer {
-            padding: 20px;
-            background-color: rgba(0, 0, 0, 0.2);
-            text-align: center;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-        }
-        
-        .sidebar-collapsed .sidebar-footer {
-            opacity: 0;
-            visibility: hidden;
-            position: absolute;
-        }
-        
-        /* Container */
         .container {
-            width: 100%;
-            max-width: 1200px;
+            width: 21cm;
+            height: 29.7cm;
             margin: 0 auto;
-            padding: 20px;
-        }
-        
-        /* Dashboard Page */
-        .dashboard {
-            padding: 20px;
-        }
-        
-        .dashboard-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .stat-card {
             background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            display: flex;
-            align-items: center;
-        }
-        
-        .stat-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin-left: 15px;
-        }
-        
-        .stat-icon.sayed {
-            background-color: rgba(39, 174, 96, 0.1);
-            color: var(--case-sayed-color);
-        }
-        
-        .stat-icon.amm {
-            background-color: rgba(52, 152, 219, 0.1);
-            color: var(--case-amm-color);
-        }
-        
-        .stat-icon.masareef {
-            background-color: rgba(243, 156, 18, 0.1);
-            color: var(--case-masareef-color);
-        }
-        
-        .stat-icon.total {
-            background-color: rgba(53, 86, 171, 0.1);
-            color: var(--primary-color);
-        }
-        
-        .stat-info h3 {
-            font-size: 0.9rem;
-            color: var(--gray-color);
-            margin-bottom: 5px;
-        }
-        
-        .stat-info p {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--dark-color);
-        }
-        
-        .recent-cases {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .section-title {
-            font-size: 1.2rem;
-            color: var(--dark-color);
-            font-weight: bold;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #000;
             position: relative;
-            padding-right: 15px;
-        }
-        
-        .section-title::before {
-            content: '';
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 5px;
-            height: 20px;
-            background-color: var(--primary-color);
-            border-radius: 5px;
-        }
-        
-        .section-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        /* Forms and Input Styles */
-        .form-page {
-            display: none;
-            padding: 20px;
-        }
-        
-        .form-container {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 0;
             overflow: hidden;
-        }
-        
-        .case-status-header {
-            background-color: var(--case-masareef-color);
-            color: white;
-            padding: 20px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
         }
         
-        .case-status-header.سيد {
-            background-color: var(--case-sayed-color);
+        /* تنسيق الطباعة */
+        @media print {
+            html, body {
+                width: 210mm;
+                height: 297mm;
+                margin: 0;
+                padding: 0;
+            }
+            
+            body {
+                background-color: white;
+            }
+            
+            .container {
+                width: 210mm;
+                height: 297mm;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                border: none;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .form-content {
+                flex: 1;
+            }
         }
         
-        .case-status-header.عام {
-            background-color: var(--case-amm-color);
+        /* تنسيق الرأس */
+        .header {
+            background-color: #FFD966;
+            padding: 5px;
+            border-bottom: 1px solid #000;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            height: auto;
         }
         
-        .case-status-header.مصاريف {
-            background-color: var(--case-masareef-color);
+        .header-right {
+            text-align: right;
+            font-size: 12px;
+            padding-right: 10px;
         }
         
-        .print-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 2px solid var(--secondary-color);
+        .header-center {
+            text-align: center;
         }
         
+        .header-left {
+            text-align: left;
+        }
+        
+        .logo {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto;
+            display: block;
+        }
+        
+        .org-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 2px 0;
+        }
+        
+        .form-title {
+            font-size: 14px;
+            margin: 2px 0;
+        }
+        
+        /* تنسيق محتوى النموذج */
         .form-content {
-            padding: 20px;
-        }
-        
-        .form-section {
-            margin-bottom: 25px;
-        }
-        
-        .form-section-title {
-            font-size: 1.1rem;
-            margin-bottom: 15px;
-            color: var(--primary-color);
-            border-bottom: 1px solid var(--gray-color);
-            padding-bottom: 5px;
+            padding: 5px 10px;
+            flex: 1;
+            overflow: hidden;
         }
         
         .form-row {
             display: flex;
-            flex-wrap: wrap;
-            margin: 0 -10px 15px;
-        }
-        
-        .form-group {
-            flex: 1;
-            min-width: 200px;
-            padding: 0 10px;
-            margin-bottom: 15px;
-            position: relative;
-        }
-        
-        .form-group.full-width {
-            flex: 100%;
-        }
-        
-        .form-group.half-width {
-            flex: 0 0 50%;
-        }
-        
-        .form-group.third-width {
-            flex: 0 0 33.333%;
-        }
-        
-        .form-group.quarter-width {
-            flex: 0 0 25%;
-        }
-        
-        label {
-            display: block;
+            width: 100%;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 3px;
             margin-bottom: 5px;
-            font-weight: 500;
-            font-size: 0.9rem;
-            color: var(--dark-color);
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--gray-color);
-            border-radius: 4px;
-            font-size: 1rem;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        
-        .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(53, 86, 171, 0.1);
-            outline: none;
-        }
-        
-        .form-control.error {
-            border-color: var(--danger-color);
-        }
-        
-        .error-message {
-            color: var(--danger-color);
-            font-size: 0.8rem;
-            margin-top: 5px;
-            display: none;
-        }
-        
-        .form-control.error + .error-message {
-            display: block;
-        }
-        
-        .input-icon {
             position: relative;
+            min-height: 30px;
         }
         
-        .input-icon .form-control {
-            padding-left: 35px;
+        .form-field {
+            flex: 1;
+            position: relative;
+            padding: 0 5px;
+            margin-top: 18px; /* زيادة التباعد من الأعلى */
         }
         
-        .input-icon i {
+        /* تحسين عنوان الحقل */
+        .field-label {
             position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--gray-color);
+            top: -18px; /* تعديل موضع العنوان للأعلى */
+            right: 7px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #444;
+            background-color: white;
+            padding: 0 4px;
+            z-index: 5;
         }
         
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 20px;
+        /* إصلاح مشكلة ظهور الأرقام والنصوص */
+        .dotted-line {
             border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            gap: 8px;
-            text-decoration: none;
-        }
-        
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background-color: #2a447d;
-        }
-        
-        .btn-secondary {
-            background-color: var(--secondary-color);
-            color: var(--dark-color);
-        }
-        
-        .btn-secondary:hover {
-            background-color: #e0be14;
-        }
-        
-        .btn-success {
-            background-color: var(--success-color);
-            color: white;
-        }
-        
-        .btn-success:hover {
-            background-color: #27ae60;
-        }
-        
-        .btn-warning {
-            background-color: var(--warning-color);
-            color: white;
-        }
-        
-        .btn-warning:hover {
-            background-color: #e67e22;
-        }
-        
-        .btn-danger {
-            background-color: var(--danger-color);
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            background-color: #c0392b;
-        }
-        
-        .btn-outline {
+            border-bottom: 1px dotted #000;
             background-color: transparent;
-            border: 1px solid currentColor;
-        }
-        
-        .btn-outline.btn-primary {
-            color: var(--primary-color);
-        }
-        
-        .btn-outline.btn-primary:hover {
-            background-color: var(--primary-color);
-            color: white;
-        }
-        
-        .form-actions {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid var(--gray-color);
-        }
-        
-        /* Table Styles */
-        .table-container {
-            overflow-x: auto;
-            margin-bottom: 20px;
-        }
-        
-        table {
             width: 100%;
-            border-collapse: collapse;
-            white-space: nowrap;
-        }
-        
-        table th, table td {
-            padding: 12px 15px;
-            text-align: right;
-            border-bottom: 1px solid var(--gray-color);
-        }
-        
-        table th {
-            background-color: var(--light-color);
-            font-weight: 600;
-            color: var(--dark-color);
-        }
-        
-        table tr:hover {
-            background-color: rgba(0, 0, 0, 0.01);
-        }
-        
-        .table-actions {
-            display: flex;
-            gap: 5px;
-        }
-        
-        .table-actions button {
-            background: none;
-            border: none;
-            width: 30px;
-            height: 30px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: var(--dark-color);
-            transition: background-color 0.3s;
-        }
-        
-        .table-actions button:hover {
-            background-color: var(--light-color);
-        }
-        
-        .table-actions .edit-btn:hover {
-            color: var(--primary-color);
-        }
-        
-        .table-actions .delete-btn:hover {
-            color: var(--danger-color);
-        }
-        
-        .table-actions .view-btn:hover {
-            color: var(--success-color);
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 50px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        
-        .badge-sayed {
-            background-color: rgba(39, 174, 96, 0.1);
-            color: var(--case-sayed-color);
-        }
-        
-        .badge-amm {
-            background-color: rgba(52, 152, 219, 0.1);
-            color: var(--case-amm-color);
-        }
-        
-        .badge-masareef {
-            background-color: rgba(243, 156, 18, 0.1);
-            color: var(--case-masareef-color);
-        }
-        
-        /* Reports Page */
-        .report-filters {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-        }
-        
-        .report-results {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        
-        /* Search Bar */
-        .search-bar {
-            margin-bottom: 20px;
-        }
-        
-        .search-input {
-            position: relative;
-        }
-        
-        .search-input input {
-            width: 100%;
-            padding: 12px 15px 12px 50px;
-            border: 1px solid var(--gray-color);
-            border-radius: 100px;
-            font-size: 1rem;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        
-        .search-input input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(53, 86, 171, 0.1);
+            height: 24px;
+            font-family: inherit;
+            font-size: 14px;
+            padding: 0 4px;
+            padding-bottom: 2px; /* تعديل لإنزال النص للأسفل قليلاً */
+            margin: 0;
             outline: none;
+            display: block;
+            text-align: right;
+            direction: rtl;
+            position: relative;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            box-sizing: border-box;
+            line-height: 20px;
+        }
+
+        /* تحسين ظهور القيم في الحقول الصغيرة */
+        .small-field {
+            width: 45px;
+            text-align: center;
+            display: inline-block;
+            border: none;
+            border-bottom: 1px dotted #000;
+            height: 24px;
+            font-size: 14px;
+            line-height: 20px;
+            padding: 0 2px;
+            margin: 0 2px;
+            position: relative;
+            bottom: -1px; /* تعديل لمحاذاة الحقول الصغيرة */
         }
         
-        .search-input i {
-            position: absolute;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--gray-color);
+        /* تنسيق الأقواس */
+        .parentheses {
+            display: inline-block;
+            margin: 0 2px;
+            line-height: 24px;
+            height: 24px;
         }
         
-        /* Modal Styles */
-        .modal {
-            display: none;
+        /* تنسيق حقول التاريخ */
+        .date-field {
+            width: 25px;
+            text-align: center;
+            display: inline-block;
+            border: none;
+            border-bottom: 1px dotted #000;
+            margin: 0 2px;
+            font-size: 14px;
+            padding: 0;
+            height: 24px;
+            line-height: 20px;
+            position: relative;
+            bottom: -1px; /* تعديل لمحاذاة حقول التاريخ */
+        }
+        
+        /* تنسيق الأرقام الصفرية */
+        .zero-val {
+            color: #aaa;
+        }
+        
+        /* تنسيق القسم السفلي */
+        .footer-section {
+            margin-top: 5px;
+            padding: 5px 10px;
+        }
+        
+        .signature-row {
+            margin-top: 5px;
+            border-top: 1px solid #ddd;
+            padding-top: 5px;
+            text-align: center;
+            font-size: 13px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .signature-row p {
+            margin: 5px 0;
+        }
+        
+        .signature-label {
+            display: inline-block;
+            margin-right: 5px;
+            font-weight: bold;
+        }
+        
+        /* تنسيق الأزرار */
+        .button-container {
+            text-align: center;
+            margin: 10px 0;
             position: fixed;
-            top: 0;
+            bottom: 10px;
             left: 0;
             right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s;
-            overflow-y: auto;
-            padding: 20px;
-        }
-        
-        .modal.show {
-            display: flex;
-            opacity: 1;
-        }
-        
-        .modal-content {
-            background-color: white;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            transform: translateY(-20px);
-            transition: transform 0.3s;
-        }
-        
-        .modal.show .modal-content {
-            transform: translateY(0);
-        }
-        
-        .modal-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--gray-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .modal-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--dark-color);
-        }
-        
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--gray-color);
-            transition: color 0.3s;
-        }
-        
-        .modal-close:hover {
-            color: var(--danger-color);
-        }
-        
-        .modal-body {
-            padding: 20px;
-        }
-        
-        .modal-footer {
-            padding: 15px 20px;
-            border-top: 1px solid var(--gray-color);
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
-        
-        /* Barcode */
-        .barcode-container {
-            text-align: center;
-            margin: 15px 0;
-        }
-        
-        .barcode-input {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        
-        /* Autocomplete */
-        .autocomplete-list {
-            position: absolute;
-            background-color: white;
-            border: 1px solid var(--gray-color);
-            border-top: none;
-            border-radius: 0 0 4px 4px;
-            width: 100%;
-            max-height: 200px;
-            overflow-y: auto;
             z-index: 100;
-            display: none;
         }
         
-        .autocomplete-item {
-            padding: 10px;
+        button {
+            padding: 8px 15px;
+            background-color: #FFD966;
+            border: 1px solid #cca755;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            font-weight: bold;
+            margin: 0 5px;
         }
         
-        .autocomplete-item:hover, .autocomplete-item.selected {
-            background-color: var(--light-color);
+        button:hover {
+            background-color: #e6c449;
         }
-        
-        /* Print Styles */
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            
-            .app-container, .main-content {
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            
-            .header, .sidebar, .form-actions, .no-print {
-                display: none !important;
-            }
-            
-            .form-page {
-                display: block !important;
-                padding: 0 !important;
-            }
-            
-            .form-container {
-                box-shadow: none !important;
-                border: 1px solid #000 !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                width: 100% !important;
-                height: auto !important;
-                page-break-after: avoid !important;
-                page-break-inside: avoid !important;
-                transform: scale(0.98) !important;
-            }
-            
-            .form-content {
-                padding: 10px !important;
-            }
-            
-            .form-section {
-                margin-bottom: 10px !important;
-            }
-            
-            .form-row {
-                margin-bottom: 5px !important;
-            }
-            
-            .form-group {
-                margin-bottom: 5px !important;
-            }
-            
-            input, select, .form-control {
-                border: none !important;
-                background: transparent !important;
-                padding: 0 !important;
-                height: auto !important;
-                font-size: 14px !important;
-            }
-            
-            label {
-                font-size: 12px !important;
-                margin-bottom: 2px !important;
-            }
-            
-            .print-header {
-                padding: 10px !important;
-                border-bottom: 1px solid #000 !important;
-            }
-            
-            .case-status-header, .print-header, .form-section-title {
-                font-size: 16px !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            
-            .case-status-header {
-                padding: 10px !important;
-            }
-            
-            .form-section-title {
-                font-size: 14px !important;
-                margin-bottom: 10px !important;
-                padding-bottom: 2px !important;
-            }
-            
-            .form-content * {
-                visibility: visible !important;
-            }
-            
-            .barcode-container {
-                margin: 10px auto !important;
-                text-align: center !important;
+
+        /* تنسيقات محددة للمتصفحات */
+        input[type="text"] {
+            outline: none;
+        }
+
+        /* تصحيح موضع النص في فايرفوكس */
+        @-moz-document url-prefix() {
+            .dotted-line, .small-field, .date-field {
+                padding-top: 4px;
             }
         }
-        
-        /* Responsive Styles */
-        @media (max-width: 992px) {
-            :root {
-                --sidebar-width: 250px;
-            }
-            
-            .main-content {
-                margin-right: 0;
-            }
-            
-            .header {
-                margin-right: 0;
-            }
-            
-            .sidebar {
-                transform: translateX(100%);
-            }
-            
-            .sidebar-open .sidebar {
-                transform: translateX(0);
-            }
-            
-            .sidebar-open::after {
-                content: '';
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background-color: rgba(0, 0, 0, 0.5);
-                z-index: 999;
+
+        /* تصحيح موضع النص في كروم وسفاري */
+        @media screen and (-webkit-min-device-pixel-ratio:0) {
+            .dotted-line, .small-field, .date-field {
+                padding-top: 2px;
             }
         }
+
+        /* تحسين الإطار العام للتأكد من مناسبة الطباعة */
+        .compact-layout .form-row {
+            margin-bottom: 1px;
+            min-height: 25px;
+        }
         
-        @media (max-width: 768px) {
-            .form-group {
-                flex: 0 0 100%;
-            }
-            
-            .dashboard-stats {
-                grid-template-columns: 1fr;
-            }
+        .compact-layout .form-field {
+            margin-top: 15px;
+        }
+        
+        .compact-layout .field-label {
+            top: -15px;
+        }
+        
+        /* تأكيد عدم اقتطاع النص */
+        input, select, textarea {
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
     </style>
 </head>
 <body>
-    <div class="app-container" id="app-container">
-        <!-- Sidebar -->
-        <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-icon">
-                    <i class="fas fa-hand-holding-heart"></i>
-                </div>
-                <div class="logo-text">
-                    <h1 style="font-size: 1rem; margin: 0;">مؤسسة أولاد الحسن ع</h1>
-                    <p style="font-size: 0.8rem; margin: 0;">الخيرية</p>
-                </div>
+    <div class="container" id="formContainer">
+        <!-- الرأس -->
+        <div class="header">
+            <div class="header-right">
+                <div>رمز الحالة: مصاريف</div>
+                <div>نوع الحالة: <span id="caseType">...............</span></div>
+                <div>التاريخ: <span id="date">29 / 6 / 2020 م</span></div>
+                <div>المنظم: <span id="organizer">محمد حسن</span></div>
             </div>
-            
-            <ul class="sidebar-menu">
-                <li class="menu-item">
-                    <a href="#" class="menu-link active" onclick="showPage('dashboard')">
-                        <i class="menu-icon fas fa-tachometer-alt"></i>
-                        <span class="menu-text">لوحة التحكم</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" onclick="showPage('new-case')">
-                        <i class="menu-icon fas fa-plus-circle"></i>
-                        <span class="menu-text">إنشاء حالة جديدة</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" onclick="showPage('cases')">
-                        <i class="menu-icon fas fa-folder-open"></i>
-                        <span class="menu-text">جميع الحالات</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" onclick="showPage('case-sayed')">
-                        <i class="menu-icon fas fa-user-tie"></i>
-                        <span class="menu-text">حالات سيد</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" onclick="showPage('case-amm')">
-                        <i class="menu-icon fas fa-users"></i>
-                        <span class="menu-text">حالات عام</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" onclick="showPage('case-masareef')">
-                        <i class="menu-icon fas fa-hand-holding-usd"></i>
-                        <span class="menu-text">حالات مصاريف</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" onclick="showPage('reports')">
-                        <i class="menu-icon fas fa-chart-bar"></i>
-                        <span class="menu-text">التقارير</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" onclick="showImportExportModal()">
-                        <i class="menu-icon fas fa-exchange-alt"></i>
-                        <span class="menu-text">استيراد / تصدير</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" onclick="showSettingsModal()">
-                        <i class="menu-icon fas fa-cog"></i>
-                        <span class="menu-text">الإعدادات</span>
-                    </a>
-                </li>
-            </ul>
-            
-            <div class="sidebar-footer">
-                مؤسسة أولاد الحسن الخيرية © 2025
+            <div class="header-center">
+                <svg class="logo" viewBox="0 0 100 100">
+                    <circle cx="50" cy="35" r="15" fill="#3498db" />
+                    <path d="M30,60 Q50,80 70,60" stroke="#3498db" stroke-width="4" fill="none" />
+                </svg>
+                <div class="org-name">مؤسسة أولاد الحسن ع</div>
+                <div class="form-title">استمارة معلومات الحالة</div>
+                <div class="org-name">الخيرية</div>
             </div>
-            
-            <button class="sidebar-toggle" id="sidebar-toggle">
-                <i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
-        
-        <!-- Header -->
-        <div class="header" id="header">
-            <div class="header-content">
-                <div class="header-title">
-                    <i class="fas fa-bars" id="menu-toggle" style="margin-left: 10px; cursor: pointer;"></i>
-                    <span id="page-title">لوحة التحكم</span>
-                </div>
-                <div class="header-actions">
-                    <button class="header-btn" onclick="showSearchModal()">
-                        <i class="fas fa-search"></i>
-                        <span>بحث</span>
-                    </button>
-                    <button class="header-btn" onclick="showBarcodeModal()">
-                        <i class="fas fa-barcode"></i>
-                        <span>مسح الباركود</span>
-                    </button>
-                </div>
+            <div class="header-left">
+                <!-- الجزء الأيسر من الرأس -->
             </div>
         </div>
         
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Dashboard Page -->
-            <div class="dashboard" id="dashboard-page">
-                <div class="dashboard-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon sayed">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3>حالات سيد</h3>
-                            <p id="sayed-count">0</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon amm">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3>حالات عام</h3>
-                            <p id="amm-count">0</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon masareef">
-                            <i class="fas fa-hand-holding-usd"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3>حالات مصاريف</h3>
-                            <p id="masareef-count">0</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon total">
-                            <i class="fas fa-folder-open"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3>إجمالي الحالات</h3>
-                            <p id="total-count">0</p>
-                        </div>
-                    </div>
+        <!-- محتوى النموذج -->
+        <div class="form-content">
+            <!-- البيانات الشخصية -->
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">الاسم الكامل</span>
+                    <input type="text" class="dotted-line" id="fullName">
                 </div>
-                
-                <div class="recent-cases">
-                    <div class="section-header">
-                        <h2 class="section-title">آخر الحالات المضافة</h2>
-                        <div class="section-actions">
-                            <button class="btn btn-primary btn-sm" onclick="showPage('new-case')">
-                                <i class="fas fa-plus"></i>
-                                <span>إضافة حالة</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>رقم الحالة</th>
-                                    <th>التاريخ</th>
-                                    <th>الاسم</th>
-                                    <th>نوع الحالة</th>
-                                    <th>المبلغ</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-cases-tbody">
-                                <!-- Recent cases will be filled here by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="form-field">
+                    <span class="field-label">اللقب</span>
+                    <input type="text" class="dotted-line" id="title">
                 </div>
             </div>
             
-            <!-- Form Page -->
-            <div class="form-page" id="new-case-page">
-                <div class="form-container">
-                    <div class="case-status-header" id="case-header">
-                        <div>
-                            <h2>استمارة معلومات الحالة</h2>
-                            <p>إضافة حالة جديدة</p>
-                        </div>
-                        <div>
-                            <div class="barcode-container no-print">
-                                <svg id="case-barcode"></svg>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-content">
-                        <form id="case-form" novalidate>
-                            <!-- Case Identifier Section -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">بيانات الحالة</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="caseId">رقم الحالة:</label>
-                                        <input type="text" id="caseId" name="caseId" class="form-control" readonly>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="caseCode">رمز الحالة:</label>
-                                        <select id="caseCode" name="caseCode" class="form-control" required>
-                                            <option value="مصاريف">مصاريف</option>
-                                            <option value="سيد">سيد</option>
-                                            <option value="عام">عام</option>
-                                        </select>
-                                        <div class="error-message">الرجاء اختيار رمز الحالة</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="caseType">نوع الحالة:</label>
-                                        <input type="text" id="caseType" name="caseType" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال نوع الحالة</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="caseDate">التاريخ:</label>
-                                        <input type="date" id="caseDate" name="caseDate" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال تاريخ الحالة</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="organizer">المنظم:</label>
-                                        <input type="text" id="organizer" name="organizer" class="form-control" value="محمد حسن" required>
-                                        <div class="error-message">الرجاء إدخال اسم المنظم</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Basic Information -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">البيانات الشخصية</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="fullName">الاسم الكامل:</label>
-                                        <input type="text" id="fullName" name="fullName" class="form-control" required list="namesDatalist">
-                                        <datalist id="namesDatalist">
-                                            <!-- Will be populated by JavaScript -->
-                                        </datalist>
-                                        <div class="error-message">الرجاء إدخال الاسم الكامل</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="lastName">اللقب:</label>
-                                        <input type="text" id="lastName" name="lastName" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال اللقب</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="parentName">أبو / أم:</label>
-                                        <input type="text" id="parentName" name="parentName" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال اسم الأب/الأم</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="age">العمر:</label>
-                                        <input type="number" id="age" name="age" class="form-control" min="0" required>
-                                        <div class="error-message">الرجاء إدخال العمر</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="socialStatus">الحالة الاجتماعية:</label>
-                                        <select id="socialStatus" name="socialStatus" class="form-control" required>
-                                            <option value="">-- اختر --</option>
-                                            <option value="متزوج/ة">متزوج/ة</option>
-                                            <option value="أعزب/عزباء">أعزب/عزباء</option>
-                                            <option value="مطلق/ة">مطلق/ة</option>
-                                            <option value="أرمل/ة">أرمل/ة</option>
-                                        </select>
-                                        <div class="error-message">الرجاء اختيار الحالة الاجتماعية</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group full-width">
-                                        <label for="caseDescription">شرح الحالة:</label>
-                                        <textarea id="caseDescription" name="caseDescription" class="form-control" rows="3" required></textarea>
-                                        <div class="error-message">الرجاء إدخال شرح الحالة</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="documentedBy">الموثق:</label>
-                                        <input type="text" id="documentedBy" name="documentedBy" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال اسم الموثق</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="mukhtar">اسم المختار:</label>
-                                        <input type="text" id="mukhtar" name="mukhtar" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال اسم المختار</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Financial Information -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">البيانات المالية</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="govSalary">راتب حكومي:</label>
-                                        <input type="number" id="govSalary" name="govSalary" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال الراتب الحكومي</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="orgSalary">راتب مؤسسة:</label>
-                                        <input type="number" id="orgSalary" name="orgSalary" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال راتب المؤسسة</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="incomeAmount">مقدار الدخل:</label>
-                                        <input type="number" id="incomeAmount" name="incomeAmount" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال مقدار الدخل</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="expenses">المصروفات:</label>
-                                        <input type="number" id="expenses" name="expenses" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال المصروفات</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="incomeRemaining">باقي الدخل:</label>
-                                        <input type="number" id="incomeRemaining" name="incomeRemaining" class="form-control" value="0" min="0" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Address Information -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">بيانات العنوان</h3>
-                                <div class="form-row">
-                                    <div class="form-group full-width">
-                                        <label for="address">العنوان وأقرب نقطة دالة:</label>
-                                        <input type="text" id="address" name="address" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال العنوان</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="housingType">نوع السكن:</label>
-                                        <select id="housingType" name="housingType" class="form-control" required>
-                                            <option value="ملك">ملك</option>
-                                            <option value="إيجار">إيجار</option>
-                                            <option value="أخرى">أخرى</option>
-                                        </select>
-                                        <div class="error-message">الرجاء اختيار نوع السكن</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Family Information -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">بيانات الأسرة</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="totalFamilyMembers">عدد أفراد الأسرة الكلي:</label>
-                                        <input type="number" id="totalFamilyMembers" name="totalFamilyMembers" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال عدد أفراد الأسرة</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="maleChildren">بنين:</label>
-                                        <input type="number" id="maleChildren" name="maleChildren" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال عدد البنين</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="femaleChildren">بنات:</label>
-                                        <input type="number" id="femaleChildren" name="femaleChildren" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال عدد البنات</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="married">متزوجين:</label>
-                                        <input type="number" id="married" name="married" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال عدد المتزوجين</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Case/Hospital Information -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">بيانات المستشفى / الحالة</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="hospitalName">اسم المستشفى او الحالة:</label>
-                                        <input type="text" id="hospitalName" name="hospitalName" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال اسم المستشفى أو الحالة</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="hospitalAddress">العنوان:</label>
-                                        <input type="text" id="hospitalAddress" name="hospitalAddress" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال عنوان المستشفى</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="caseTypeDetail">تفاصيل نوع الحالة:</label>
-                                        <input type="text" id="caseTypeDetail" name="caseTypeDetail" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال تفاصيل نوع الحالة</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="amountNumeric">المبلغ رقما:</label>
-                                        <input type="number" id="amountNumeric" name="amountNumeric" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال المبلغ</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="amountWritten">المبلغ كتابة:</label>
-                                        <input type="text" id="amountWritten" name="amountWritten" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال المبلغ كتابة</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="totalAmount">المجموع:</label>
-                                        <input type="number" id="totalAmount" name="totalAmount" class="form-control" value="0" min="0" required>
-                                        <div class="error-message">الرجاء إدخال المجموع</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="doctorName">اسم الدكتور:</label>
-                                        <input type="text" id="doctorName" name="doctorName" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال اسم الدكتور</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Contact Information -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">بيانات الاتصال</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="phoneFirst">رقم الهاتف الأول:</label>
-                                        <input type="text" id="phoneFirst" name="phoneFirst" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال رقم الهاتف الأول</div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="phoneSecond">رقم الهاتف الثاني:</label>
-                                        <input type="text" id="phoneSecond" name="phoneSecond" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Spouse Information -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">بيانات الزوج/ة</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="spouseName">الزوج/ة:</label>
-                                        <input type="text" id="spouseName" name="spouseName" class="form-control">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="spouseLastName">اللقب:</label>
-                                        <input type="text" id="spouseLastName" name="spouseLastName" class="form-control">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="spouseOccupation">المهنة:</label>
-                                        <input type="text" id="spouseOccupation" name="spouseOccupation" class="form-control">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="spouseSalary">الراتب:</label>
-                                        <input type="number" id="spouseSalary" name="spouseSalary" class="form-control" min="0">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Additional Support Information -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">معلومات الدعم الإضافي</h3>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="hasOtherSupport">هل يوجد معيل آخر:</label>
-                                        <select id="hasOtherSupport" name="hasOtherSupport" class="form-control" required>
-                                            <option value="لا">لا</option>
-                                            <option value="نعم">نعم</option>
-                                        </select>
-                                        <div class="error-message">الرجاء اختيار ما إذا كان هناك معيل آخر</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group full-width">
-                                        <label for="supportingAgencies">الجهات التي تقوم بالمساعدة:</label>
-                                        <input type="text" id="supportingAgencies" name="supportingAgencies" class="form-control">
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group full-width">
-                                        <label for="notes">الملاحظات:</label>
-                                        <textarea id="notes" name="notes" class="form-control" rows="2"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Support Amount -->
-                            <div class="form-section">
-                                <h3 class="form-section-title">مبلغ المساعدة</h3>
-                                <div class="form-row">
-                                    <div class="form-group half-width">
-                                        <label for="estimatedAssistance">يصرف مبلغ المساعدة المقدر:</label>
-                                        <input type="text" id="estimatedAssistance" name="estimatedAssistance" class="form-control" required>
-                                        <div class="error-message">الرجاء إدخال مبلغ المساعدة المقدر</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="amountPaid">تم صرف مبلغ:</label>
-                                        <input type="text" id="amountPaid" name="amountPaid" class="form-control">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="paymentDate">بتاريخ:</label>
-                                        <input type="date" id="paymentDate" name="paymentDate" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Administration -->
-                            <div class="form-section">
-                                <div class="form-row">
-                                    <div class="form-group" style="text-align: center; flex: 2;">
-                                        <p>إدارة المؤسسة</p>
-                                        <p>السيد أسامة السعبري والسيد فؤاد السعبري</p>
-                                        <p id="admin-date"></p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="form-actions no-print">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-save"></i>
-                                    <span>حفظ الحالة</span>
-                                </button>
-                                <button type="button" class="btn btn-primary" onclick="printForm()">
-                                    <i class="fas fa-print"></i>
-                                    <span>طباعة الاستمارة</span>
-                                </button>
-                                <button type="button" class="btn btn-warning" onclick="resetForm()">
-                                    <i class="fas fa-sync-alt"></i>
-                                    <span>إعادة تعيين</span>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">أبو / أم</span>
+                    <span class="parentheses">(</span>
+                    <input type="text" class="small-field" id="parent">
+                    <span class="parentheses">)</span>
+                </div>
+                <div class="form-field">
+                    <span class="field-label">العمر</span>
+                    <span class="parentheses">(</span>
+                    <input type="text" class="small-field" id="age">
+                    <span class="parentheses">)</span>
+                </div>
+                <div class="form-field">
+                    <span class="field-label">الحالة الاجتماعية</span>
+                    <span class="parentheses">(</span>
+                    <input type="text" class="dotted-line" id="socialStatus">
+                    <span class="parentheses">)</span>
                 </div>
             </div>
             
-            <!-- Cases List Pages -->
-            <div class="form-page" id="cases-page">
-                <div class="section-header">
-                    <h2 class="section-title">جميع الحالات</h2>
-                    <div class="section-actions">
-                        <button class="btn btn-primary" onclick="showPage('new-case')">
-                            <i class="fas fa-plus"></i>
-                            <span>إضافة حالة</span>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="search-bar">
-                    <div class="search-input">
-                        <input type="text" id="search-cases" placeholder="البحث عن حالة...">
-                        <i class="fas fa-search"></i>
-                    </div>
-                </div>
-                
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>رقم الحالة</th>
-                                <th>التاريخ</th>
-                                <th>الاسم</th>
-                                <th>رمز الحالة</th>
-                                <th>نوع الحالة</th>
-                                <th>المبلغ</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="all-cases-tbody">
-                            <!-- All cases will be filled here by JavaScript -->
-                        </tbody>
-                    </table>
+            <!-- شرح الحالة -->
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">شرح الحالة</span>
+                    <input type="text" class="dotted-line" id="caseDescription">
                 </div>
             </div>
             
-            <div class="form-page" id="case-sayed-page">
-                <div class="section-header">
-                    <h2 class="section-title">حالات سيد</h2>
-                    <div class="section-actions">
-                        <button class="btn btn-primary" onclick="addNewCase('سيد')">
-                            <i class="fas fa-plus"></i>
-                            <span>إضافة حالة سيد</span>
-                        </button>
-                    </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">الموثق</span>
+                    <input type="text" class="dotted-line" id="documenter">
                 </div>
-                
-                <div class="search-bar">
-                    <div class="search-input">
-                        <input type="text" id="search-sayed" placeholder="البحث في حالات سيد...">
-                        <i class="fas fa-search"></i>
-                    </div>
-                </div>
-                
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>رقم الحالة</th>
-                                <th>التاريخ</th>
-                                <th>الاسم</th>
-                                <th>نوع الحالة</th>
-                                <th>المبلغ</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sayed-cases-tbody">
-                            <!-- Sayed cases will be filled here by JavaScript -->
-                        </tbody>
-                    </table>
+                <div class="form-field">
+                    <span class="field-label">اسم المختار</span>
+                    <input type="text" class="dotted-line" id="mukhtarName">
                 </div>
             </div>
             
-            <div class="form-page" id="case-amm-page">
-                <div class="section-header">
-                    <h2 class="section-title">حالات عام</h2>
-                    <div class="section-actions">
-                        <button class="btn btn-primary" onclick="addNewCase('عام')">
-                            <i class="fas fa-plus"></i>
-                            <span>إضافة حالة عام</span>
-                        </button>
-                    </div>
+            <!-- المعلومات المالية -->
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">راتب حكومي</span>
+                    <input type="text" class="dotted-line zero-val" id="govSalary" value="0">
                 </div>
-                
-                <div class="search-bar">
-                    <div class="search-input">
-                        <input type="text" id="search-amm" placeholder="البحث في حالات عام...">
-                        <i class="fas fa-search"></i>
-                    </div>
+                <div class="form-field">
+                    <span class="field-label">راتب مؤسسة</span>
+                    <input type="text" class="dotted-line zero-val" id="orgSalary" value="0">
                 </div>
-                
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>رقم الحالة</th>
-                                <th>التاريخ</th>
-                                <th>الاسم</th>
-                                <th>نوع الحالة</th>
-                                <th>المبلغ</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="amm-cases-tbody">
-                            <!-- Amm cases will be filled here by JavaScript -->
-                        </tbody>
-                    </table>
+                <div class="form-field">
+                    <span class="field-label">مقدار الدخل</span>
+                    <input type="text" class="dotted-line zero-val" id="incomeAmount" value="0">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">المصروفات</span>
+                    <input type="text" class="dotted-line zero-val" id="expenses" value="0">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">باقي الدخل</span>
+                    <input type="text" class="dotted-line zero-val" id="remainingIncome" value="0">
                 </div>
             </div>
             
-            <div class="form-page" id="case-masareef-page">
-                <div class="section-header">
-                    <h2 class="section-title">حالات مصاريف</h2>
-                    <div class="section-actions">
-                        <button class="btn btn-primary" onclick="addNewCase('مصاريف')">
-                            <i class="fas fa-plus"></i>
-                            <span>إضافة حالة مصاريف</span>
-                        </button>
-                    </div>
+            <!-- معلومات السكن -->
+            <div class="form-row">
+                <div class="form-field" style="flex: 2;">
+                    <span class="field-label">العنوان وأقرب نقطة دالة</span>
+                    <input type="text" class="dotted-line" id="address">
                 </div>
-                
-                <div class="search-bar">
-                    <div class="search-input">
-                        <input type="text" id="search-masareef" placeholder="البحث في حالات مصاريف...">
-                        <i class="fas fa-search"></i>
-                    </div>
-                </div>
-                
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>رقم الحالة</th>
-                                <th>التاريخ</th>
-                                <th>الاسم</th>
-                                <th>نوع الحالة</th>
-                                <th>المبلغ</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="masareef-cases-tbody">
-                            <!-- Masareef cases will be filled here by JavaScript -->
-                        </tbody>
-                    </table>
+                <div class="form-field">
+                    <span class="field-label">نوع السكن</span>
+                    <input type="text" class="dotted-line" id="housingType" value="ملك">
                 </div>
             </div>
             
-            <!-- Reports Page -->
-            <div class="form-page" id="reports-page">
-                <div class="section-header">
-                    <h2 class="section-title">التقارير</h2>
+            <!-- عدد أفراد الأسرة -->
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">عدد أفراد الأسرة: الكلي</span>
+                    <input type="text" class="dotted-line zero-val" id="totalMembers" value="0">
                 </div>
-                
-                <div class="report-filters">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="report-type">نوع التقرير:</label>
-                            <select id="report-type" class="form-control">
-                                <option value="all">جميع الحالات</option>
-                                <option value="sayed">حالات سيد</option>
-                                <option value="amm">حالات عام</option>
-                                <option value="masareef">حالات مصاريف</option>
-                                <option value="date">حسب التاريخ</option>
-                                <option value="amount">حسب المبلغ</option>
-                            </select>
-                        </div>
-                        <div class="form-group" id="date-range-container" style="display: none;">
-                            <label for="report-start-date">من تاريخ:</label>
-                            <input type="date" id="report-start-date" class="form-control">
-                        </div>
-                        <div class="form-group" id="date-range-end-container" style="display: none;">
-                            <label for="report-end-date">إلى تاريخ:</label>
-                            <input type="date" id="report-end-date" class="form-control">
-                        </div>
-                        <div class="form-group" id="amount-range-container" style="display: none;">
-                            <label for="report-min-amount">الحد الأدنى للمبلغ:</label>
-                            <input type="number" id="report-min-amount" class="form-control" min="0">
-                        </div>
-                        <div class="form-group" id="amount-range-max-container" style="display: none;">
-                            <label for="report-max-amount">الحد الأقصى للمبلغ:</label>
-                            <input type="number" id="report-max-amount" class="form-control" min="0">
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button class="btn btn-primary" onclick="generateReport()">
-                            <i class="fas fa-chart-line"></i>
-                            <span>إنشاء التقرير</span>
-                        </button>
-                        <button class="btn btn-success" onclick="exportReportToExcel()">
-                            <i class="fas fa-file-excel"></i>
-                            <span>تصدير إلى Excel</span>
-                        </button>
-                        <button class="btn btn-warning" onclick="printReport()">
-                            <i class="fas fa-print"></i>
-                            <span>طباعة التقرير</span>
-                        </button>
-                    </div>
+                <div class="form-field">
+                    <span class="field-label">بنين</span>
+                    <input type="text" class="dotted-line zero-val" id="males" value="0">
                 </div>
-                
-                <div class="report-results">
-                    <div class="section-header">
-                        <h3 class="section-title">نتائج التقرير</h3>
-                    </div>
-                    
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>رقم الحالة</th>
-                                    <th>التاريخ</th>
-                                    <th>الاسم</th>
-                                    <th>رمز الحالة</th>
-                                    <th>نوع الحالة</th>
-                                    <th>المبلغ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="report-results-tbody">
-                                <!-- Report results will be filled here by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="report-summary" style="margin-top: 20px;">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>إجمالي عدد الحالات:</label>
-                                <div class="form-control" id="report-total-cases">0</div>
-                            </div>
-                            <div class="form-group">
-                                <label>إجمالي المبالغ:</label>
-                                <div class="form-control" id="report-total-amount">0</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="form-field">
+                    <span class="field-label">بنات</span>
+                    <input type="text" class="dotted-line zero-val" id="females" value="0">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">متزوجين</span>
+                    <input type="text" class="dotted-line zero-val" id="married" value="0">
+                </div>
+            </div>
+            
+            <!-- المعلومات الطبية -->
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">اسم المستشفى أو الحالة</span>
+                    <input type="text" class="dotted-line zero-val" id="hospitalName" value="0">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">العنوان</span>
+                    <input type="text" class="dotted-line zero-val" id="hospitalAddress" value="0">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">نوع الحالة</span>
+                    <input type="text" class="dotted-line zero-val" id="conditionType" value="0">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">المبلغ رقماً</span>
+                    <input type="text" class="dotted-line zero-val" id="amountNum" value="0">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">المبلغ كتابة</span>
+                    <input type="text" class="dotted-line zero-val" id="amountText" value="0">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">المجموع</span>
+                    <input type="text" class="dotted-line zero-val" id="total" value="0">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">اسم الدكتور</span>
+                    <input type="text" class="dotted-line zero-val" id="doctorName" value="0">
+                </div>
+            </div>
+            
+            <!-- معلومات الاتصال -->
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">رقم الهاتف الأول</span>
+                    <input type="text" class="dotted-line" id="phone1">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">رقم الهاتف الثاني</span>
+                    <input type="text" class="dotted-line" id="phone2">
+                </div>
+            </div>
+            
+            <!-- معلومات الزوج/ة -->
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">الزوج/ة</span>
+                    <input type="text" class="dotted-line" id="spouse">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">اللقب</span>
+                    <input type="text" class="dotted-line" id="spouseTitle">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">المهنة</span>
+                    <input type="text" class="dotted-line" id="job">
+                </div>
+                <div class="form-field">
+                    <span class="field-label">الراتب</span>
+                    <input type="text" class="dotted-line" id="salary">
+                </div>
+            </div>
+            
+            <!-- معلومات إضافية -->
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">هل يوجد معيل آخر</span>
+                    <input type="text" class="dotted-line" id="otherProvider" value="لا">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">الجهات التي تقوم بالمساعدة</span>
+                    <input type="text" class="dotted-line" id="helpingOrgs">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">الملاحظات</span>
+                    <input type="text" class="dotted-line" id="notes">
+                </div>
+            </div>
+            
+            <!-- يصرف مبلغ المساعدة -->
+            <div class="form-row">
+                <div class="form-field">
+                    <span class="field-label">يصرف مبلغ المساعدة المقدر</span>
+                    <span class="parentheses">(</span>
+                    <input type="text" class="dotted-line" id="estimatedHelp" style="width: 80%;">
+                    <span class="parentheses">)</span>
                 </div>
             </div>
         </div>
         
-        <!-- Search Modal -->
-        <div class="modal" id="search-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title">بحث عن حالة</h2>
-                    <button class="modal-close" onclick="closeModal('search-modal')">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-row">
-                        <div class="form-group full-width">
-                            <label for="search-query">أدخل كلمة البحث:</label>
-                            <input type="text" id="search-query" class="form-control" placeholder="اسم، رقم الحالة، نوع الحالة...">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="search-field">البحث في:</label>
-                            <select id="search-field" class="form-control">
-                                <option value="all">جميع الحقول</option>
-                                <option value="caseId">رقم الحالة</option>
-                                <option value="fullName">الاسم</option>
-                                <option value="caseCode">رمز الحالة</option>
-                                <option value="caseType">نوع الحالة</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-primary" onclick="searchCases()">
-                        <i class="fas fa-search"></i>
-                        <span>بحث</span>
-                    </button>
-                </div>
+        <!-- القسم السفلي والتوقيعات -->
+        <div class="footer-section">
+            <div class="signature-row">
+                <span class="signature-label">إدارة المؤسسة</span>
+            </div>
+            
+            <div class="signature-row">
+                <span>تم صرف مبلغ</span>
+                <span class="parentheses">(</span>
+                <input type="text" class="dotted-line" id="amountPaid" style="width: 150px;">
+                <span class="parentheses">)</span>
+                <span>بتاريخ</span>
+                <input type="text" class="date-field" id="paymentDay">
+                /
+                <input type="text" class="date-field" id="paymentMonth">
+                /
+                <input type="text" class="date-field" id="paymentYear" value="20">
+            </div>
+            
+            <div class="signature-row">
+                <p>السيد أسامة السعبري و السيد فؤاد السعبري</p>
+                <input type="text" class="date-field" id="managementDay">
+                /
+                <input type="text" class="date-field" id="managementMonth">
+                /
+                <input type="text" class="date-field" id="managementYear" value="20">
             </div>
         </div>
         
-        <!-- Barcode Modal -->
-        <div class="modal" id="barcode-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title">مسح الباركود</h2>
-                    <button class="modal-close" onclick="closeModal('barcode-modal')">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p>أدخل رقم الحالة أو امسح الباركود الخاص بالحالة:</p>
-                    <div class="barcode-input">
-                        <input type="text" id="barcode-input" class="form-control" placeholder="رقم الحالة">
-                        <button class="btn btn-primary" onclick="findCaseByBarcode()">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                    <p>أو قم بالتقاط صورة للباركود:</p>
-                    <div style="text-align: center;">
-                        <button class="btn btn-primary" onclick="scanBarcode()">
-                            <i class="fas fa-camera"></i>
-                            <span>التقاط الباركود</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Import/Export Modal -->
-        <div class="modal" id="import-export-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title">استيراد / تصدير البيانات</h2>
-                    <button class="modal-close" onclick="closeModal('import-export-modal')">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-section">
-                        <h3 class="form-section-title">تصدير البيانات</h3>
-                        <p>قم بتصدير جميع بيانات الحالات كنسخة احتياطية:</p>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="export-type">نوع التصدير:</label>
-                                <select id="export-type" class="form-control">
-                                    <option value="all">جميع الحالات</option>
-                                    <option value="sayed">حالات سيد فقط</option>
-                                    <option value="amm">حالات عام فقط</option>
-                                    <option value="masareef">حالات مصاريف فقط</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="text-align: center; margin-top: 15px;">
-                            <button class="btn btn-success" onclick="exportData()">
-                                <i class="fas fa-download"></i>
-                                <span>تصدير البيانات</span>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <h3 class="form-section-title">استيراد البيانات</h3>
-                        <p>قم باستيراد بيانات الحالات من ملف:</p>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label for="import-file">اختر ملف:</label>
-                                <input type="file" id="import-file" class="form-control" accept=".json">
-                            </div>
-                        </div>
-                        <div style="text-align: center; margin-top: 15px;">
-                            <button class="btn btn-primary" onclick="importData()">
-                                <i class="fas fa-upload"></i>
-                                <span>استيراد البيانات</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Settings Modal -->
-        <div class="modal" id="settings-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title">الإعدادات</h2>
-                    <button class="modal-close" onclick="closeModal('settings-modal')">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-section">
-                        <h3 class="form-section-title">إعدادات النظام</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="setting-org-name">اسم المؤسسة:</label>
-                                <input type="text" id="setting-org-name" class="form-control" value="مؤسسة أولاد الحسن ع الخيرية">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="setting-organizer">اسم المنظم الافتراضي:</label>
-                                <input type="text" id="setting-organizer" class="form-control" value="محمد حسن">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="setting-admin-names">أسماء الإدارة:</label>
-                                <input type="text" id="setting-admin-names" class="form-control" value="السيد أسامة السعبري والسيد فؤاد السعبري">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <h3 class="form-section-title">إعدادات الحفظ التلقائي</h3>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label for="auto-save">الحفظ التلقائي:</label>
-                                <select id="auto-save" class="form-control">
-                                    <option value="enabled">مفعل</option>
-                                    <option value="disabled">معطل</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group full-width">
-                                <label for="auto-save-interval">الفاصل الزمني للحفظ التلقائي (بالثواني):</label>
-                                <input type="number" id="auto-save-interval" class="form-control" value="60" min="30">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-success" onclick="saveSettings()">
-                        <i class="fas fa-save"></i>
-                        <span>حفظ الإعدادات</span>
-                    </button>
-                </div>
-            </div>
+        <!-- الأزرار -->
+        <div class="button-container no-print">
+            <button id="printBtn">طباعة النموذج</button>
+            <button id="resetBtn">إعادة تعيين</button>
+            <button id="compactModeBtn">تنسيق الطباعة</button>
         </div>
     </div>
-    
+
     <script>
-        // Global variables
-        let cases = {
-            "سيد": [],
-            "عام": [],
-            "مصاريف": []
-        };
-        let caseCounter = 1;
-        let autoSaveInterval;
-        let settings = {
-            orgName: "مؤسسة أولاد الحسن ع الخيرية",
-            organizer: "محمد حسن",
-            adminNames: "السيد أسامة السعبري والسيد فؤاد السعبري",
-            autoSave: "enabled",
-            autoSaveInterval: 60
-        };
-        
-        // Names data for autocomplete
-        let namesData = [];
-        
-        // Initialize the application
-        function initApp() {
-            // Load settings from local storage
-            loadSettings();
-            
-            // Load cases from local storage
-            loadCasesFromStorage();
-            
-            // Set current date in form
-            setCurrentDate();
-            
-            // Generate a new case ID
-            generateCaseId();
-            
-            // Update dashboard stats
-            updateDashboardStats();
-            
-            // Setup autocomplete data
-            setupAutocompleteData();
-            
-            // Add event listeners to financial fields
-            setupFinancialListeners();
-            
-            // Add form validation
-            setupFormValidation();
-            
-            // Setup case code change event
-            document.getElementById('caseCode').addEventListener('change', updateCaseHeaderStyle);
-            
-            // Setup barcode generation
-            generateBarcode(document.getElementById('caseId').value);
-            
-            // Setup report type change event
-            document.getElementById('report-type').addEventListener('change', handleReportTypeChange);
-            
-            // Setup search listeners
-            setupSearchListeners();
-            
-            // Setup auto-save
-            startAutoSave();
-            
-            // Initialize modals
-            initModals();
-            
-            // Initialize sidebar toggle
-            initSidebar();
-        }
-        
-        // Load settings from local storage
-        function loadSettings() {
-            const storedSettings = localStorage.getItem('charityAppSettings');
-            if (storedSettings) {
-                settings = JSON.parse(storedSettings);
-                
-                // Apply settings to UI
-                document.getElementById('setting-org-name').value = settings.orgName;
-                document.getElementById('setting-organizer').value = settings.organizer;
-                document.getElementById('setting-admin-names').value = settings.adminNames;
-                document.getElementById('auto-save').value = settings.autoSave;
-                document.getElementById('auto-save-interval').value = settings.autoSaveInterval;
-                
-                // Update organizer field
-                document.getElementById('organizer').value = settings.organizer;
-            }
-        }
-        
-        // Save settings to local storage
-        function saveSettings() {
-            settings.orgName = document.getElementById('setting-org-name').value;
-            settings.organizer = document.getElementById('setting-organizer').value;
-            settings.adminNames = document.getElementById('setting-admin-names').value;
-            settings.autoSave = document.getElementById('auto-save').value;
-            settings.autoSaveInterval = parseInt(document.getElementById('auto-save-interval').value);
-            
-            localStorage.setItem('charityAppSettings', JSON.stringify(settings));
-            
-            // Apply new settings
-            document.getElementById('organizer').value = settings.organizer;
-            
-            // Restart auto-save with new interval
-            stopAutoSave();
-            startAutoSave();
-            
-            // Show success message
-            showAlert('تم حفظ الإعدادات بنجاح', 'success');
-            
-            // Close the modal
-            closeModal('settings-modal');
-        }
-        
-        // Initialize sidebar toggle
-        function initSidebar() {
-            const sidebarToggle = document.getElementById('sidebar-toggle');
-            const menuToggle = document.getElementById('menu-toggle');
-            const appContainer = document.getElementById('app-container');
-            
-            sidebarToggle.addEventListener('click', function() {
-                appContainer.classList.toggle('sidebar-collapsed');
-                if (appContainer.classList.contains('sidebar-collapsed')) {
-                    sidebarToggle.innerHTML = '<i class="fas fa-chevron-left"></i>';
-                } else {
-                    sidebarToggle.innerHTML = '<i class="fas fa-chevron-right"></i>';
-                }
-            });
-            
-            // Mobile menu toggle
-            menuToggle.addEventListener('click', function() {
-                appContainer.classList.toggle('sidebar-open');
-            });
-        }
-        
-        // Initialize modals
-        function initModals() {
-            // Close modals when clicking outside
-            window.addEventListener('click', function(event) {
-                if (event.target.classList.contains('modal')) {
-                    closeModal(event.target.id);
-                }
-            });
-        }
-        
-        // Load cases from local storage
-        function loadCasesFromStorage() {
-            const storedSayedCases = localStorage.getItem('sayedCases');
-            const storedAmmCases = localStorage.getItem('ammCases');
-            const storedMasareefCases = localStorage.getItem('masareefCases');
-            const storedCaseCounter = localStorage.getItem('caseCounter');
-            
-            if (storedSayedCases) {
-                cases['سيد'] = JSON.parse(storedSayedCases);
-            }
-            
-            if (storedAmmCases) {
-                cases['عام'] = JSON.parse(storedAmmCases);
-            }
-            
-            if (storedMasareefCases) {
-                cases['مصاريف'] = JSON.parse(storedMasareefCases);
-            }
-            
-            if (storedCaseCounter) {
-                caseCounter = parseInt(storedCaseCounter);
-            }
-            
-            // Update case lists
-            updateCasesList('سيد');
-            updateCasesList('عام');
-            updateCasesList('مصاريف');
-            updateRecentCases();
-        }
-        
-        // Save cases to local storage
-        function saveCasesToStorage() {
-            localStorage.setItem('sayedCases', JSON.stringify(cases['سيد']));
-            localStorage.setItem('ammCases', JSON.stringify(cases['عام']));
-            localStorage.setItem('masareefCases', JSON.stringify(cases['مصاريف']));
-            localStorage.setItem('caseCounter', caseCounter.toString());
-        }
-        
-        // Generate a new unique case ID
-        function generateCaseId() {
-            const caseIdField = document.getElementById('caseId');
-            const currentDate = new Date();
-            const year = currentDate.getFullYear().toString().substr(-2);
-            const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-            const day = String(currentDate.getDate()).padStart(2, '0');
-            
-            const caseId = `${year}${month}${day}-${caseCounter}`;
-            caseIdField.value = caseId;
-            
-            return caseId;
-        }
-        
-        // Set current date in the form
-        function setCurrentDate() {
-            const today = new Date();
-            const formattedDate = today.toISOString().substr(0, 10);
-            document.getElementById('caseDate').value = formattedDate;
-            
-            // Format for display
-            const day = String(today.getDate()).padStart(2, '0');
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const year = today.getFullYear();
-            
-            document.getElementById('admin-date').textContent = day + ' / ' + month + ' / ' + year;
-        }
-        
-        // Setup autocomplete data
-        function setupAutocompleteData() {
-            const datalist = document.getElementById('namesDatalist');
-            datalist.innerHTML = '';
-            
-            // Get all unique names from cases
-            const allNames = new Set();
-            
-            Object.values(cases).forEach(caseArray => {
-                caseArray.forEach(caseItem => {
-                    if (caseItem.fullName) {
-                        allNames.add(caseItem.fullName);
-                    }
-                });
-            });
-            
-            // Add names to the namesData array
-            namesData = Array.from(allNames);
-            
-            // Add options to datalist
-            namesData.forEach(name => {
-                const option = document.createElement('option');
-                option.value = name;
-                datalist.appendChild(option);
-            });
-            
-            // Add input event for autocomplete
-            document.getElementById('fullName').addEventListener('input', function(e) {
-                const input = e.target.value.toLowerCase();
-                if (input.length < 2) return;
-                
-                // Auto fill other fields if name exists
-                const matchingCase = findCaseByName(input);
-                if (matchingCase) {
-                    fillFormWithExistingData(matchingCase);
-                }
-            });
-        }
-        
-        // Find case by name (partial match)
-        function findCaseByName(partialName) {
-            partialName = partialName.toLowerCase();
-            
-            for (const caseType in cases) {
-                for (const caseItem of cases[caseType]) {
-                    if (caseItem.fullName && caseItem.fullName.toLowerCase().includes(partialName)) {
-                        return caseItem;
-                    }
-                }
-            }
-            
-            return null;
-        }
-        
-        // Fill form with existing data
-        function fillFormWithExistingData(caseData) {
-            // Don't override the newly generated caseId
-            const currentCaseId = document.getElementById('caseId').value;
-            
-            // Fill all form fields except caseId
-            document.getElementById('caseCode').value = caseData.caseCode || 'مصاريف';
-            document.getElementById('caseType').value = caseData.caseType || '';
-            document.getElementById('lastName').value = caseData.lastName || '';
-            document.getElementById('parentName').value = caseData.parentName || '';
-            document.getElementById('age').value = caseData.age || '';
-            document.getElementById('socialStatus').value = caseData.socialStatus || '';
-            document.getElementById('caseDescription').value = caseData.caseDescription || '';
-            document.getElementById('documentedBy').value = caseData.documentedBy || '';
-            document.getElementById('mukhtar').value = caseData.mukhtar || '';
-            document.getElementById('govSalary').value = caseData.govSalary || 0;
-            document.getElementById('orgSalary').value = caseData.orgSalary || 0;
-            document.getElementById('incomeAmount').value = caseData.incomeAmount || 0;
-            document.getElementById('expenses').value = caseData.expenses || 0;
-            document.getElementById('address').value = caseData.address || '';
-            document.getElementById('housingType').value = caseData.housingType || 'ملك';
-            document.getElementById('totalFamilyMembers').value = caseData.totalFamilyMembers || 0;
-            document.getElementById('maleChildren').value = caseData.maleChildren || 0;
-            document.getElementById('femaleChildren').value = caseData.femaleChildren || 0;
-            document.getElementById('married').value = caseData.married || 0;
-            document.getElementById('hospitalName').value = caseData.hospitalName || '';
-            document.getElementById('hospitalAddress').value = caseData.hospitalAddress || '';
-            document.getElementById('caseTypeDetail').value = caseData.caseTypeDetail || '';
-            document.getElementById('amountNumeric').value = caseData.amountNumeric || 0;
-            document.getElementById('amountWritten').value = caseData.amountWritten || '';
-            document.getElementById('totalAmount').value = caseData.totalAmount || 0;
-            document.getElementById('doctorName').value = caseData.doctorName || '';
-            document.getElementById('phoneFirst').value = caseData.phoneFirst || '';
-            document.getElementById('phoneSecond').value = caseData.phoneSecond || '';
-            document.getElementById('spouseName').value = caseData.spouseName || '';
-            document.getElementById('spouseLastName').value = caseData.spouseLastName || '';
-            document.getElementById('spouseOccupation').value = caseData.spouseOccupation || '';
-            document.getElementById('spouseSalary').value = caseData.spouseSalary || '';
-            document.getElementById('hasOtherSupport').value = caseData.hasOtherSupport || 'لا';
-            document.getElementById('supportingAgencies').value = caseData.supportingAgencies || '';
-            document.getElementById('notes').value = caseData.notes || '';
-            document.getElementById('estimatedAssistance').value = caseData.estimatedAssistance || '';
-            document.getElementById('amountPaid').value = caseData.amountPaid || '';
-            
-            if (caseData.paymentDate) {
-                document.getElementById('paymentDate').value = caseData.paymentDate;
-            }
-            
-            // Calculate remaining income
-            calculateRemainingIncome();
-            
-            // Update case header style
-            updateCaseHeaderStyle();
-        }
-        
-        // Setup financial field listeners
-        function setupFinancialListeners() {
-            const financialFields = ['govSalary', 'orgSalary', 'incomeAmount', 'expenses'];
-            financialFields.forEach(field => {
-                document.getElementById(field).addEventListener('input', calculateRemainingIncome);
-            });
-        }
-        
-        // Calculate remaining income
+        // حساب باقي الدخل
         function calculateRemainingIncome() {
-            const govSalary = parseFloat(document.getElementById('govSalary').value) || 0;
-            const orgSalary = parseFloat(document.getElementById('orgSalary').value) || 0;
-            const incomeAmount = parseFloat(document.getElementById('incomeAmount').value) || 0;
+            const income = parseFloat(document.getElementById('incomeAmount').value) || 0;
             const expenses = parseFloat(document.getElementById('expenses').value) || 0;
+            const remainingIncome = income - expenses;
             
-            const totalIncome = govSalary + orgSalary + incomeAmount;
-            const remaining = totalIncome - expenses;
+            document.getElementById('remainingIncome').value = remainingIncome.toString();
             
-            document.getElementById('incomeRemaining').value = remaining;
-        }
-        
-        // Update case header style based on case code
-        function updateCaseHeaderStyle() {
-            const caseCode = document.getElementById('caseCode').value;
-            const caseHeader = document.getElementById('case-header');
-            
-            // Remove all case type classes
-            caseHeader.classList.remove('سيد', 'عام', 'مصاريف');
-            
-            // Add the appropriate class
-            caseHeader.classList.add(caseCode);
-        }
-        
-        // Setup form validation
-        function setupFormValidation() {
-            const form = document.getElementById('case-form');
-            
-            form.addEventListener('submit', function(event) {
-                event.preventDefault();
-                
-                if (validateForm()) {
-                    saveCase();
-                }
-            });
-        }
-        
-        // Validate form before submission
-        function validateForm() {
-            const requiredFields = document.querySelectorAll('[required]');
-            let isValid = true;
-            
-            requiredFields.forEach(field => {
-                field.classList.remove('error');
-                
-                if (!field.value.trim()) {
-                    field.classList.add('error');
-                    isValid = false;
-                }
-                
-                // Validate numbers
-                if (field.type === 'number' && field.value < 0) {
-                    field.classList.add('error');
-                    isValid = false;
-                }
-            });
-            
-            if (!isValid) {
-                showAlert('الرجاء ملء جميع الحقول المطلوبة', 'error');
-            }
-            
-            return isValid;
-        }
-        
-        // Save case data
-        function saveCase() {
-            // Get form data
-            const formData = getFormData();
-            
-            // Get case code (سيد, عام, مصاريف)
-            const caseCode = formData.caseCode;
-            
-            // Add or update case
-            const existingCaseIndex = cases[caseCode].findIndex(c => c.caseId === formData.caseId);
-            
-            if (existingCaseIndex !== -1) {
-                // Update existing case
-                cases[caseCode][existingCaseIndex] = formData;
+            // تحديث نمط الرقم
+            if (remainingIncome === 0) {
+                document.getElementById('remainingIncome').classList.add('zero-val');
             } else {
-                // Add new case
-                cases[caseCode].push(formData);
-                // Increment counter for next case
-                caseCounter++;
-            }
-            
-            // Save to local storage
-            saveCasesToStorage();
-            
-            // Update case lists
-            updateCasesList(caseCode);
-            updateRecentCases();
-            
-            // Update dashboard stats
-            updateDashboardStats();
-            
-            // Update autocomplete data
-            setupAutocompleteData();
-            
-            // Generate barcode
-            generateBarcode(formData.caseId);
-            
-            // Show success message
-            showAlert('تم حفظ الحالة بنجاح', 'success');
-            
-            // Reset form if it's a new case
-            if (existingCaseIndex === -1) {
-                resetForm();
+                document.getElementById('remainingIncome').classList.remove('zero-val');
             }
         }
         
-        // Get all form data as an object
-        function getFormData() {
-            const form = document.getElementById('case-form');
-            const formData = {};
-            
-            // Get all form elements
-            Array.from(form.elements).forEach(element => {
-                if (element.name && element.name !== 'submit') {
-                    formData[element.name] = element.value;
-                }
-            });
-            
-            // Add the date in ISO format for sorting
-            if (formData.caseDate) {
-                formData.caseDateISO = new Date(formData.caseDate).toISOString();
-            }
-            
-            return formData;
-        }
+        // إضافة مستمعي الأحداث للحقول المالية
+        document.getElementById('incomeAmount').addEventListener('input', calculateRemainingIncome);
+        document.getElementById('expenses').addEventListener('input', calculateRemainingIncome);
         
-        // Reset the form
-        function resetForm() {
-            document.getElementById('case-form').reset();
-            
-            // Set default values
-            setCurrentDate();
-            document.getElementById('caseCode').value = 'مصاريف';
-            document.getElementById('housingType').value = 'ملك';
-            document.getElementById('hasOtherSupport').value = 'لا';
-            
-            // Generate new case ID
-            generateCaseId();
-            
-            // Calculate remaining income
-            calculateRemainingIncome();
-            
-            // Update case header style
-            updateCaseHeaderStyle();
-            
-            // Generate barcode
-            generateBarcode(document.getElementById('caseId').value);
-            
-            // Remove error classes
-            const errorFields = document.querySelectorAll('.error');
-            errorFields.forEach(field => field.classList.remove('error'));
-        }
-        
-        // Print the form
-        function printForm() {
+        // تنفيذ الطباعة
+        document.getElementById('printBtn').addEventListener('click', function() {
             window.print();
-        }
+        });
         
-        // Generate barcode
-        function generateBarcode(caseId) {
-            const barcodeElement = document.getElementById('case-barcode');
+        // تفعيل وضع التنسيق المضغوط للطباعة
+        document.getElementById('compactModeBtn').addEventListener('click', function() {
+            const container = document.getElementById('formContainer');
+            container.classList.toggle('compact-layout');
             
-            // Clear previous barcode
-            while (barcodeElement.firstChild) {
-                barcodeElement.removeChild(barcodeElement.firstChild);
-            }
-            
-            // Generate new barcode
-            JsBarcode(barcodeElement, caseId, {
-                format: "CODE128",
-                lineColor: "#000",
-                width: 2,
-                height: 50,
-                displayValue: true,
-                fontSize: 16,
-                margin: 10
-            });
-        }
-        
-        // Update dashboard stats
-        function updateDashboardStats() {
-            document.getElementById('sayed-count').textContent = cases['سيد'].length;
-            document.getElementById('amm-count').textContent = cases['عام'].length;
-            document.getElementById('masareef-count').textContent = cases['مصاريف'].length;
-            
-            const totalCount = cases['سيد'].length + cases['عام'].length + cases['مصاريف'].length;
-            document.getElementById('total-count').textContent = totalCount;
-        }
-        
-        // Update cases list for a specific type
-        function updateCasesList(caseType) {
-            const casesList = cases[caseType] || [];
-            let tbodyId;
-            
-            // Get the appropriate tbody
-            switch (caseType) {
-                case 'سيد':
-                    tbodyId = 'sayed-cases-tbody';
-                    break;
-                case 'عام':
-                    tbodyId = 'amm-cases-tbody';
-                    break;
-                case 'مصاريف':
-                    tbodyId = 'masareef-cases-tbody';
-                    break;
-                default:
-                    return;
-            }
-            
-            const tbody = document.getElementById(tbodyId);
-            if (!tbody) return;
-            
-            // Clear the table
-            tbody.innerHTML = '';
-            
-            // Sort cases by date (newest first)
-            const sortedCases = [...casesList].sort((a, b) => {
-                return new Date(b.caseDateISO || b.caseDate) - new Date(a.caseDateISO || a.caseDate);
-            });
-            
-            // Add cases to the table
-            sortedCases.forEach(caseItem => {
-                const row = document.createElement('tr');
-                
-                // Format date
-                const caseDate = new Date(caseItem.caseDate);
-                const formattedDate = `${caseDate.getDate()}/${caseDate.getMonth() + 1}/${caseDate.getFullYear()}`;
-                
-                row.innerHTML = `
-                    <td>${caseItem.caseId}</td>
-                    <td>${formattedDate}</td>
-                    <td>${caseItem.fullName}</td>
-                    <td>${caseItem.caseType}</td>
-                    <td>${caseItem.amountNumeric}</td>
-                    <td>
-                        <div class="table-actions">
-                            <button class="view-btn" onclick="viewCase('${caseItem.caseId}', '${caseType}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="edit-btn" onclick="editCase('${caseItem.caseId}', '${caseType}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="delete-btn" onclick="confirmDeleteCase('${caseItem.caseId}', '${caseType}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-            
-            // Also update the all cases table
-            updateAllCasesTable();
-        }
-        
-        // Update all cases table
-        function updateAllCasesTable() {
-            const tbody = document.getElementById('all-cases-tbody');
-            if (!tbody) return;
-            
-            // Clear the table
-            tbody.innerHTML = '';
-            
-            // Combine all cases
-            const allCases = [
-                ...cases['سيد'],
-                ...cases['عام'],
-                ...cases['مصاريف']
-            ];
-            
-            // Sort cases by date (newest first)
-            const sortedCases = allCases.sort((a, b) => {
-                return new Date(b.caseDateISO || b.caseDate) - new Date(a.caseDateISO || a.caseDate);
-            });
-            
-            // Add cases to the table
-            sortedCases.forEach(caseItem => {
-                const row = document.createElement('tr');
-                
-                // Format date
-                const caseDate = new Date(caseItem.caseDate);
-                const formattedDate = `${caseDate.getDate()}/${caseDate.getMonth() + 1}/${caseDate.getFullYear()}`;
-                
-                // Get badge class
-                let badgeClass = '';
-                switch (caseItem.caseCode) {
-                    case 'سيد':
-                        badgeClass = 'badge-sayed';
-                        break;
-                    case 'عام':
-                        badgeClass = 'badge-amm';
-                        break;
-                    case 'مصاريف':
-                        badgeClass = 'badge-masareef';
-                        break;
-                }
-                
-                row.innerHTML = `
-                    <td>${caseItem.caseId}</td>
-                    <td>${formattedDate}</td>
-                    <td>${caseItem.fullName}</td>
-                    <td><span class="badge ${badgeClass}">${caseItem.caseCode}</span></td>
-                    <td>${caseItem.caseType}</td>
-                    <td>${caseItem.amountNumeric}</td>
-                    <td>
-                        <div class="table-actions">
-                            <button class="view-btn" onclick="viewCase('${caseItem.caseId}', '${caseItem.caseCode}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="edit-btn" onclick="editCase('${caseItem.caseId}', '${caseItem.caseCode}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="delete-btn" onclick="confirmDeleteCase('${caseItem.caseId}', '${caseItem.caseCode}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-        }
-        
-        // Update recent cases on dashboard
-        function updateRecentCases() {
-            const tbody = document.getElementById('recent-cases-tbody');
-            if (!tbody) return;
-            
-            // Clear the table
-            tbody.innerHTML = '';
-            
-            // Combine all cases
-            const allCases = [
-                ...cases['سيد'],
-                ...cases['عام'],
-                ...cases['مصاريف']
-            ];
-            
-            // Sort cases by date (newest first)
-            const sortedCases = allCases.sort((a, b) => {
-                return new Date(b.caseDateISO || b.caseDate) - new Date(a.caseDateISO || a.caseDate);
-            });
-            
-            // Take the most recent 5 cases
-            const recentCases = sortedCases.slice(0, 5);
-            
-            // Add cases to the table
-            recentCases.forEach(caseItem => {
-                const row = document.createElement('tr');
-                
-                // Format date
-                const caseDate = new Date(caseItem.caseDate);
-                const formattedDate = `${caseDate.getDate()}/${caseDate.getMonth() + 1}/${caseDate.getFullYear()}`;
-                
-                // Get badge class
-                let badgeClass = '';
-                switch (caseItem.caseCode) {
-                    case 'سيد':
-                        badgeClass = 'badge-sayed';
-                        break;
-                    case 'عام':
-                        badgeClass = 'badge-amm';
-                        break;
-                    case 'مصاريف':
-                        badgeClass = 'badge-masareef';
-                        break;
-                }
-                
-                row.innerHTML = `
-                    <td>${caseItem.caseId}</td>
-                    <td>${formattedDate}</td>
-                    <td>${caseItem.fullName}</td>
-                    <td><span class="badge ${badgeClass}">${caseItem.caseCode}</span></td>
-                    <td>${caseItem.amountNumeric}</td>
-                    <td>
-                        <div class="table-actions">
-                            <button class="view-btn" onclick="viewCase('${caseItem.caseId}', '${caseItem.caseCode}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="edit-btn" onclick="editCase('${caseItem.caseId}', '${caseItem.caseCode}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-        }
-        
-        // View case details
-        function viewCase(caseId, caseType) {
-            const caseItem = findCaseById(caseId, caseType);
-            
-            if (caseItem) {
-                // Show the form page
-                showPage('new-case');
-                
-                // Fill the form with case data
-                fillFormWithCaseData(caseItem);
-                
-                // Disable form fields for view mode
-                toggleFormFields(true);
-                
-                // Update form actions
-                const formActions = document.querySelector('.form-actions');
-                formActions.innerHTML = `
-                    <button type="button" class="btn btn-primary" onclick="editCase('${caseId}', '${caseType}')">
-                        <i class="fas fa-edit"></i>
-                        <span>تعديل الحالة</span>
-                    </button>
-                    <button type="button" class="btn btn-success" onclick="printForm()">
-                        <i class="fas fa-print"></i>
-                        <span>طباعة الاستمارة</span>
-                    </button>
-                    <button type="button" class="btn" onclick="showPage('cases')">
-                        <i class="fas fa-arrow-right"></i>
-                        <span>العودة</span>
-                    </button>
-                `;
-            }
-        }
-        
-        // Edit case
-        function editCase(caseId, caseType) {
-            const caseItem = findCaseById(caseId, caseType);
-            
-            if (caseItem) {
-                // Show the form page
-                showPage('new-case');
-                
-                // Fill the form with case data
-                fillFormWithCaseData(caseItem);
-                
-                // Enable form fields
-                toggleFormFields(false);
-                
-                // Update form actions
-                const formActions = document.querySelector('.form-actions');
-                formActions.innerHTML = `
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save"></i>
-                        <span>حفظ التعديلات</span>
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="printForm()">
-                        <i class="fas fa-print"></i>
-                        <span>طباعة الاستمارة</span>
-                    </button>
-                    <button type="button" class="btn" onclick="showPage('cases')">
-                        <i class="fas fa-arrow-right"></i>
-                        <span>العودة</span>
-                    </button>
-                `;
-            }
-        }
-        
-        // Fill the form with case data
-        function fillFormWithCaseData(caseItem) {
-            // Fill all form fields
-            for (const key in caseItem) {
-                const field = document.getElementById(key);
-                if (field) {
-                    field.value = caseItem[key];
-                }
-            }
-            
-            // Calculate remaining income
-            calculateRemainingIncome();
-            
-            // Update case header style
-            updateCaseHeaderStyle();
-            
-            // Generate barcode
-            generateBarcode(caseItem.caseId);
-        }
-        
-        // Toggle form fields (enable/disable)
-        function toggleFormFields(disabled) {
-            const formElements = document.querySelectorAll('#case-form input, #case-form select, #case-form textarea');
-            
-            formElements.forEach(element => {
-                element.disabled = disabled;
-            });
-            
-            // Always disable the case ID field
-            document.getElementById('caseId').disabled = true;
-        }
-        
-        // Find case by ID
-        function findCaseById(caseId, caseType) {
-            return cases[caseType].find(c => c.caseId === caseId);
-        }
-        
-        // Confirm case deletion
-        function confirmDeleteCase(caseId, caseType) {
-            Swal.fire({
-                title: 'تأكيد الحذف',
-                text: 'هل أنت متأكد من رغبتك في حذف هذه الحالة؟',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#e74c3c',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'نعم، حذف',
-                cancelButtonText: 'إلغاء'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    deleteCase(caseId, caseType);
-                }
-            });
-        }
-        
-        // Delete case
-        function deleteCase(caseId, caseType) {
-            // Find the index of the case
-            const caseIndex = cases[caseType].findIndex(c => c.caseId === caseId);
-            
-            if (caseIndex !== -1) {
-                // Remove the case from the array
-                cases[caseType].splice(caseIndex, 1);
-                
-                // Save to local storage
-                saveCasesToStorage();
-                
-                // Update UI
-                updateCasesList(caseType);
-                updateRecentCases();
-                updateDashboardStats();
-                
-                // Show success message
-                showAlert('تم حذف الحالة بنجاح', 'success');
-            }
-        }
-        
-        // Add a new case of specific type
-        function addNewCase(caseType) {
-            // Show the form page
-            showPage('new-case');
-            
-            // Reset the form
-            resetForm();
-            
-            // Set the case code
-            document.getElementById('caseCode').value = caseType;
-            
-            // Update case header style
-            updateCaseHeaderStyle();
-        }
-        
-        // Save case automatically
-        function startAutoSave() {
-            if (settings.autoSave === 'enabled') {
-                autoSaveInterval = setInterval(() => {
-                    const form = document.getElementById('case-form');
-                    if (form && !document.getElementById('caseId').disabled) {
-                        saveCase();
-                    }
-                }, settings.autoSaveInterval * 1000);
-            }
-        }
-        
-        // Stop auto save
-        function stopAutoSave() {
-            if (autoSaveInterval) {
-                clearInterval(autoSaveInterval);
-            }
-        }
-        
-        // Show a specific page
-        function showPage(pageId) {
-            // Hide all pages
-            const pages = document.querySelectorAll('.form-page, .dashboard');
-            pages.forEach(page => {
-                page.style.display = 'none';
-            });
-            
-            // Show the requested page
-            document.getElementById(`${pageId}-page`).style.display = 'block';
-            
-            // Update page title
-            updatePageTitle(pageId);
-            
-            // Update active menu item
-            updateActiveMenuItem(pageId);
-        }
-        
-        // Update page title
-        function updatePageTitle(pageId) {
-            let title = '';
-            
-            switch (pageId) {
-                case 'dashboard':
-                    title = 'لوحة التحكم';
-                    break;
-                case 'new-case':
-                    title = 'إنشاء حالة جديدة';
-                    break;
-                case 'cases':
-                    title = 'جميع الحالات';
-                    break;
-                case 'case-sayed':
-                    title = 'حالات سيد';
-                    break;
-                case 'case-amm':
-                    title = 'حالات عام';
-                    break;
-                case 'case-masareef':
-                    title = 'حالات مصاريف';
-                    break;
-                case 'reports':
-                    title = 'التقارير';
-                    break;
-                default:
-                    title = 'مؤسسة أولاد الحسن الخيرية';
-            }
-            
-            document.getElementById('page-title').textContent = title;
-        }
-        
-        // Update active menu item
-        function updateActiveMenuItem(pageId) {
-            // Remove active class from all menu items
-            const menuItems = document.querySelectorAll('.menu-link');
-            menuItems.forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Add active class to the current page's menu item
-            const activeMenuItem = document.querySelector(`.menu-link[onclick="showPage('${pageId}')"]`);
-            if (activeMenuItem) {
-                activeMenuItem.classList.add('active');
-            }
-        }
-        
-        // Show modal
-        function showModal(modalId) {
-            const modal = document.getElementById(modalId);
-            modal.classList.add('show');
-        }
-        
-        // Close modal
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            modal.classList.remove('show');
-        }
-        
-        // Show search modal
-        function showSearchModal() {
-            showModal('search-modal');
-            document.getElementById('search-query').focus();
-        }
-        
-        // Show barcode modal
-        function showBarcodeModal() {
-            showModal('barcode-modal');
-            document.getElementById('barcode-input').focus();
-        }
-        
-        // Show import/export modal
-        function showImportExportModal() {
-            showModal('import-export-modal');
-        }
-        
-        // Show settings modal
-        function showSettingsModal() {
-            showModal('settings-modal');
-        }
-        
-        // Setup search listeners
-        function setupSearchListeners() {
-            // Global search
-            document.getElementById('search-query').addEventListener('keyup', function(e) {
-                if (e.key === 'Enter') {
-                    searchCases();
-                }
-            });
-            
-            // Cases page search
-            document.getElementById('search-cases').addEventListener('keyup', function() {
-                filterCasesTable('all-cases-tbody', this.value);
-            });
-            
-            // Sayed cases search
-            document.getElementById('search-sayed').addEventListener('keyup', function() {
-                filterCasesTable('sayed-cases-tbody', this.value);
-            });
-            
-            // Amm cases search
-            document.getElementById('search-amm').addEventListener('keyup', function() {
-                filterCasesTable('amm-cases-tbody', this.value);
-            });
-            
-            // Masareef cases search
-            document.getElementById('search-masareef').addEventListener('keyup', function() {
-                filterCasesTable('masareef-cases-tbody', this.value);
-            });
-        }
-        
-        // Filter cases table by search query
-        function filterCasesTable(tableId, query) {
-            const tbody = document.getElementById(tableId);
-            if (!tbody) return;
-            
-            const rows = tbody.getElementsByTagName('tr');
-            const lowercaseQuery = query.toLowerCase();
-            
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                const text = row.textContent.toLowerCase();
-                
-                if (text.includes(lowercaseQuery)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            }
-        }
-        
-        // Search cases from the search modal
-        function searchCases() {
-            const query = document.getElementById('search-query').value.toLowerCase();
-            const field = document.getElementById('search-field').value;
-            
-            if (!query) {
-                showAlert('الرجاء إدخال كلمة البحث', 'error');
-                return;
-            }
-            
-            // Combine all cases
-            const allCases = [
-                ...cases['سيد'],
-                ...cases['عام'],
-                ...cases['مصاريف']
-            ];
-            
-            // Filter cases by search query
-            const filteredCases = allCases.filter(caseItem => {
-                if (field === 'all') {
-                    // Search in all fields
-                    return Object.values(caseItem).some(value => 
-                        value && value.toString().toLowerCase().includes(query)
-                    );
-                } else {
-                    // Search in specific field
-                    return caseItem[field] && 
-                           caseItem[field].toString().toLowerCase().includes(query);
-                }
-            });
-            
-            // Close the search modal
-            closeModal('search-modal');
-            
-            // Show the cases page
-            showPage('cases');
-            
-            // Clear the table
-            const tbody = document.getElementById('all-cases-tbody');
-            tbody.innerHTML = '';
-            
-            // Sort filtered cases by date (newest first)
-            const sortedCases = filteredCases.sort((a, b) => {
-                return new Date(b.caseDateISO || b.caseDate) - new Date(a.caseDateISO || a.caseDate);
-            });
-            
-            // Add filtered cases to the table
-            sortedCases.forEach(caseItem => {
-                const row = document.createElement('tr');
-                
-                // Format date
-                const caseDate = new Date(caseItem.caseDate);
-                const formattedDate = `${caseDate.getDate()}/${caseDate.getMonth() + 1}/${caseDate.getFullYear()}`;
-                
-                // Get badge class
-                let badgeClass = '';
-                switch (caseItem.caseCode) {
-                    case 'سيد':
-                        badgeClass = 'badge-sayed';
-                        break;
-                    case 'عام':
-                        badgeClass = 'badge-amm';
-                        break;
-                    case 'مصاريف':
-                        badgeClass = 'badge-masareef';
-                        break;
-                }
-                
-                row.innerHTML = `
-                    <td>${caseItem.caseId}</td>
-                    <td>${formattedDate}</td>
-                    <td>${caseItem.fullName}</td>
-                    <td><span class="badge ${badgeClass}">${caseItem.caseCode}</span></td>
-                    <td>${caseItem.caseType}</td>
-                    <td>${caseItem.amountNumeric}</td>
-                    <td>
-                        <div class="table-actions">
-                            <button class="view-btn" onclick="viewCase('${caseItem.caseId}', '${caseItem.caseCode}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="edit-btn" onclick="editCase('${caseItem.caseId}', '${caseItem.caseCode}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="delete-btn" onclick="confirmDeleteCase('${caseItem.caseId}', '${caseItem.caseCode}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-            
-            // Show message if no results found
-            if (filteredCases.length === 0) {
-                showAlert('لم يتم العثور على نتائج للبحث', 'info');
+            if (container.classList.contains('compact-layout')) {
+                this.textContent = 'إلغاء تنسيق الطباعة';
             } else {
-                showAlert(`تم العثور على ${filteredCases.length} نتيجة للبحث`, 'success');
+                this.textContent = 'تنسيق الطباعة';
             }
-        }
+        });
         
-        // Find case by barcode
-        function findCaseByBarcode() {
-            const barcodeInput = document.getElementById('barcode-input').value;
-            
-            if (!barcodeInput) {
-                showAlert('الرجاء إدخال رقم الحالة', 'error');
-                return;
-            }
-            
-            // Search for the case in all case types
-            let foundCase = null;
-            let foundCaseType = null;
-            
-            for (const caseType in cases) {
-                const caseItem = cases[caseType].find(c => c.caseId === barcodeInput);
-                if (caseItem) {
-                    foundCase = caseItem;
-                    foundCaseType = caseType;
-                    break;
-                }
-            }
-            
-            // Close the barcode modal
-            closeModal('barcode-modal');
-            
-            if (foundCase) {
-                // View the case
-                viewCase(foundCase.caseId, foundCaseType);
-            } else {
-                showAlert('لم يتم العثور على حالة بهذا الرقم', 'error');
-            }
-        }
-        
-        // Scan barcode (simulated)
-        function scanBarcode() {
-            showAlert('جاري محاكاة مسح الباركود...', 'info');
-            
-            // Simulate scanning delay
-            setTimeout(() => {
-                // Get a random case
-                const allCases = [
-                    ...cases['سيد'],
-                    ...cases['عام'],
-                    ...cases['مصاريف']
-                ];
-                
-                if (allCases.length > 0) {
-                    const randomCase = allCases[Math.floor(Math.random() * allCases.length)];
-                    document.getElementById('barcode-input').value = randomCase.caseId;
-                    showAlert('تم مسح الباركود بنجاح', 'success');
-                } else {
-                    showAlert('لا توجد حالات لمحاكاة المسح', 'error');
-                }
-            }, 1500);
-        }
-        
-        // Handle report type change
-        function handleReportTypeChange() {
-            const reportType = document.getElementById('report-type').value;
-            
-            // Hide all containers first
-            document.getElementById('date-range-container').style.display = 'none';
-            document.getElementById('date-range-end-container').style.display = 'none';
-            document.getElementById('amount-range-container').style.display = 'none';
-            document.getElementById('amount-range-max-container').style.display = 'none';
-            
-            // Show relevant containers based on report type
-            if (reportType === 'date') {
-                document.getElementById('date-range-container').style.display = 'block';
-                document.getElementById('date-range-end-container').style.display = 'block';
-            } else if (reportType === 'amount') {
-                document.getElementById('amount-range-container').style.display = 'block';
-                document.getElementById('amount-range-max-container').style.display = 'block';
-            }
-        }
-        
-        // Generate report
-        function generateReport() {
-            const reportType = document.getElementById('report-type').value;
-            let filteredCases = [];
-            
-            // Combine all cases
-            const allCases = [
-                ...cases['سيد'],
-                ...cases['عام'],
-                ...cases['مصاريف']
-            ];
-            
-            // Filter cases based on report type
-            switch (reportType) {
-                case 'all':
-                    filteredCases = allCases;
-                    break;
-                case 'sayed':
-                    filteredCases = cases['سيد'];
-                    break;
-                case 'amm':
-                    filteredCases = cases['عام'];
-                    break;
-                case 'masareef':
-                    filteredCases = cases['مصاريف'];
-                    break;
-                case 'date':
-                    const startDate = new Date(document.getElementById('report-start-date').value);
-                    const endDate = new Date(document.getElementById('report-end-date').value);
-                    
-                    if (!startDate || !endDate) {
-                        showAlert('الرجاء اختيار تاريخ البداية والنهاية', 'error');
-                        return;
-                    }
-                    
-                    // Set end date to end of day
-                    endDate.setHours(23, 59, 59, 999);
-                    
-                    filteredCases = allCases.filter(caseItem => {
-                        const caseDate = new Date(caseItem.caseDate);
-                        return caseDate >= startDate && caseDate <= endDate;
-                    });
-                    break;
-                case 'amount':
-                    const minAmount = parseFloat(document.getElementById('report-min-amount').value) || 0;
-                    const maxAmount = parseFloat(document.getElementById('report-max-amount').value) || Infinity;
-                    
-                    filteredCases = allCases.filter(caseItem => {
-                        const amount = parseFloat(caseItem.amountNumeric) || 0;
-                        return amount >= minAmount && amount <= maxAmount;
-                    });
-                    break;
-            }
-            
-            // Sort cases by date (newest first)
-            const sortedCases = filteredCases.sort((a, b) => {
-                return new Date(b.caseDateISO || b.caseDate) - new Date(a.caseDateISO || a.caseDate);
-            });
-            
-            // Update report table
-            const tbody = document.getElementById('report-results-tbody');
-            tbody.innerHTML = '';
-            
-            sortedCases.forEach(caseItem => {
-                const row = document.createElement('tr');
-                
-                // Format date
-                const caseDate = new Date(caseItem.caseDate);
-                const formattedDate = `${caseDate.getDate()}/${caseDate.getMonth() + 1}/${caseDate.getFullYear()}`;
-                
-                // Get badge class
-                let badgeClass = '';
-                switch (caseItem.caseCode) {
-                    case 'سيد':
-                        badgeClass = 'badge-sayed';
-                        break;
-                    case 'عام':
-                        badgeClass = 'badge-amm';
-                        break;
-                    case 'مصاريف':
-                        badgeClass = 'badge-masareef';
-                        break;
-                }
-                
-                row.innerHTML = `
-                    <td>${caseItem.caseId}</td>
-                    <td>${formattedDate}</td>
-                    <td>${caseItem.fullName}</td>
-                    <td><span class="badge ${badgeClass}">${caseItem.caseCode}</span></td>
-                    <td>${caseItem.caseType}</td>
-                    <td>${caseItem.amountNumeric}</td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-            
-            // Calculate report summary
-            const totalCases = sortedCases.length;
-            const totalAmount = sortedCases.reduce((sum, caseItem) => sum + (parseFloat(caseItem.amountNumeric) || 0), 0);
-            
-            // Update report summary
-            document.getElementById('report-total-cases').textContent = totalCases;
-            document.getElementById('report-total-amount').textContent = totalAmount.toLocaleString();
-            
-            // Show message if no results found
-            if (totalCases === 0) {
-                showAlert('لم يتم العثور على نتائج للتقرير', 'info');
-            } else {
-                showAlert(`تم إنشاء التقرير بنجاح. إجمالي الحالات: ${totalCases}`, 'success');
-            }
-        }
-        
-        // Print report
-        function printReport() {
-            window.print();
-        }
-        
-        // Export report to Excel
-        function exportReportToExcel() {
-            showAlert('جاري تصدير التقرير إلى Excel...', 'info');
-            
-            // Simulate export delay
-            setTimeout(() => {
-                showAlert('تم تصدير التقرير بنجاح', 'success');
-            }, 1500);
-        }
-        
-        // Export data to file
-        function exportData() {
-            const exportType = document.getElementById('export-type').value;
-            let dataToExport;
-            
-            switch (exportType) {
-                case 'all':
-                    dataToExport = {
-                        'سيد': cases['سيد'],
-                        'عام': cases['عام'],
-                        'مصاريف': cases['مصاريف'],
-                        caseCounter: caseCounter
-                    };
-                    break;
-                case 'sayed':
-                    dataToExport = { 'سيد': cases['سيد'] };
-                    break;
-                case 'amm':
-                    dataToExport = { 'عام': cases['عام'] };
-                    break;
-                case 'masareef':
-                    dataToExport = { 'مصاريف': cases['مصاريف'] };
-                    break;
-            }
-            
-            // Convert to JSON
-            const jsonData = JSON.stringify(dataToExport, null, 2);
-            
-            // Create file
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            // Create download link
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `charity_cases_export_${new Date().toISOString().split('T')[0]}.json`;
-            
-            // Trigger download
-            document.body.appendChild(a);
-            a.click();
-            
-            // Clean up
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            // Show success message
-            showAlert('تم تصدير البيانات بنجاح', 'success');
-            
-            // Close the modal
-            closeModal('import-export-modal');
-        }
-        
-        // Import data from file
-        function importData() {
-            const fileInput = document.getElementById('import-file');
-            
-            if (!fileInput.files.length) {
-                showAlert('الرجاء اختيار ملف للاستيراد', 'error');
-                return;
-            }
-            
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    
-                    // Merge imported data with existing data
-                    if (importedData['سيد']) {
-                        cases['سيد'] = [...cases['سيد'], ...importedData['سيد']];
-                    }
-                    
-                    if (importedData['عام']) {
-                        cases['عام'] = [...cases['عام'], ...importedData['عام']];
-                    }
-                    
-                    if (importedData['مصاريف']) {
-                        cases['مصاريف'] = [...cases['مصاريف'], ...importedData['مصاريف']];
-                    }
-                    
-                    if (importedData.caseCounter && importedData.caseCounter > caseCounter) {
-                        caseCounter = importedData.caseCounter;
-                    }
-                    
-                    // Remove duplicates
-                    removeDuplicateCases();
-                    
-                    // Save to local storage
-                    saveCasesToStorage();
-                    
-                    // Update UI
-                    updateCasesList('سيد');
-                    updateCasesList('عام');
-                    updateCasesList('مصاريف');
-                    updateRecentCases();
-                    updateDashboardStats();
-                    setupAutocompleteData();
-                    
-                    // Show success message
-                    showAlert('تم استيراد البيانات بنجاح', 'success');
-                    
-                    // Close the modal
-                    closeModal('import-export-modal');
-                    
-                } catch (error) {
-                    showAlert('حدث خطأ أثناء استيراد البيانات. الرجاء التأكد من صحة الملف.', 'error');
-                    console.error('Import error:', error);
-                }
-            };
-            
-            reader.readAsText(file);
-        }
-        
-        // Remove duplicate cases
-        function removeDuplicateCases() {
-            for (const caseType in cases) {
-                const uniqueCases = [];
-                const caseIds = new Set();
-                
-                cases[caseType].forEach(caseItem => {
-                    if (!caseIds.has(caseItem.caseId)) {
-                        uniqueCases.push(caseItem);
-                        caseIds.add(caseItem.caseId);
+        // إعادة تعيين النموذج
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            if (confirm('هل أنت متأكد من رغبتك في إعادة تعيين جميع الحقول؟')) {
+                // إعادة تعيين جميع الحقول النصية
+                document.querySelectorAll('input[type="text"]').forEach(function(input) {
+                    if (['govSalary', 'orgSalary', 'incomeAmount', 'expenses', 
+                       'remainingIncome', 'totalMembers', 'males', 'females', 
+                       'married', 'hospitalName', 'hospitalAddress', 'conditionType', 
+                       'amountNum', 'amountText', 'total', 'doctorName'].includes(input.id)) {
+                        input.value = '0';
+                        input.classList.add('zero-val');
+                    } else if (input.id === 'housingType') {
+                        input.value = 'ملك';
+                    } else if (input.id === 'otherProvider') {
+                        input.value = 'لا';
+                    } else if (input.id === 'paymentYear' || input.id === 'managementYear') {
+                        input.value = '20';
+                    } else {
+                        input.value = '';
                     }
                 });
                 
-                cases[caseType] = uniqueCases;
+                // إعادة تعيين المعلومات الثابتة
+                document.getElementById('caseType').textContent = '...............';
+                
+                // تعيين التاريخ الحالي
+                const today = new Date();
+                const formattedDate = today.getDate() + ' / ' + (today.getMonth() + 1) + ' / ' + today.getFullYear() + ' م';
+                document.getElementById('date').textContent = formattedDate;
+                
+                document.getElementById('organizer').textContent = 'محمد حسن';
+            }
+        });
+        
+        // تحسين معالجة الأرقام الصفرية
+        document.querySelectorAll('.zero-val').forEach(function(input) {
+            // إضافة معالج للتركيز على الحقل
+            input.addEventListener('focus', function() {
+                if (this.value === '0') {
+                    this.value = '';
+                    this.classList.remove('zero-val');
+                }
+            });
+            
+            // إضافة معالج لترك الحقل
+            input.addEventListener('blur', function() {
+                if (this.value === '') {
+                    this.value = '0';
+                    this.classList.add('zero-val');
+                } else if (this.value !== '0') {
+                    this.classList.remove('zero-val');
+                }
+            });
+            
+            // التحقق من قيمة الإدخال أثناء الكتابة
+            input.addEventListener('input', function() {
+                if (this.value === '0' || this.value === '') {
+                    this.classList.add('zero-val');
+                } else {
+                    this.classList.remove('zero-val');
+                }
+            });
+        });
+        
+        // وضع تاريخ اليوم افتراضيًا
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const day = today.getDate();
+            const month = today.getMonth() + 1;
+            const year = today.getFullYear().toString().slice(-2);
+            
+            // تعيين حقول التاريخ
+            document.getElementById('paymentDay').value = day;
+            document.getElementById('paymentMonth').value = month;
+            document.getElementById('managementDay').value = day;
+            document.getElementById('managementMonth').value = month;
+            
+            // تحديث تاريخ النموذج
+            const formattedDate = day + ' / ' + month + ' / ' + today.getFullYear() + ' م';
+            document.getElementById('date').textContent = formattedDate;
+            
+            // تطبيق الوضع المضغوط افتراضيًا للطباعة
+            if (window.matchMedia && window.matchMedia('print').matches) {
+                document.getElementById('formContainer').classList.add('compact-layout');
+            }
+        });
+        
+        // تعديل حجم الخط بناءً على حجم الشاشة
+        function adjustFontSize() {
+            const container = document.getElementById('formContainer');
+            const formContent = document.querySelector('.form-content');
+            
+            // ضبط المسافات حسب ارتفاع المحتوى
+            if (formContent.scrollHeight > formContent.clientHeight) {
+                container.classList.add('compact-layout');
             }
         }
         
-        // Show alert message
-        function showAlert(message, type = 'info') {
-            Swal.fire({
-                text: message,
-                icon: type,
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true
-            });
-        }
-        
-        // Run initialization when page loads
-        window.onload = initApp;
+        // تنفيذ ضبط الحجم عند تحميل الصفحة
+        window.addEventListener('load', adjustFontSize);
+        window.addEventListener('resize', adjustFontSize);
     </script>
 </body>
 </html>
