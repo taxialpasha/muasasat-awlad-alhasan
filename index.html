@@ -599,16 +599,6 @@
             color: #2c3e50;
         }
 
-        .btn-secondary {
-            background: linear-gradient(135deg, #6c757d, #495057);
-            color: white;
-        }
-
-        .btn-info {
-            background: linear-gradient(135deg, #17a2b8, #138496);
-            color: white;
-        }
-
         .btn-group {
             display: flex;
             flex-direction: column;
@@ -913,96 +903,6 @@
             z-index: 9995;
             display: flex;
             gap: 10px;
-        }
-
-        /* ==============================
-           قوالب الطباعة والأدوات المتقدمة
-        ============================== */
-        .templates-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        
-        .template-card {
-            border: 2px solid #e3e6f0;
-            border-radius: 10px;
-            padding: 15px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .template-card:hover {
-            border-color: #3498db;
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2);
-            transform: translateY(-2px);
-        }
-        
-        .template-card.selected {
-            border-color: #27ae60;
-            background: linear-gradient(135deg, #d5f4e6, #f0f8f5);
-        }
-        
-        .template-card h4 {
-            margin: 0 0 8px 0;
-            font-size: 14px;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-        
-        .template-card p {
-            margin: 0;
-            font-size: 12px;
-            color: #6c757d;
-            line-height: 1.4;
-        }
-        
-        .template-card .template-actions {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .template-card:hover .template-actions {
-            opacity: 1;
-        }
-        
-        .template-action-btn {
-            background: rgba(0,0,0,0.7);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            cursor: pointer;
-            margin-right: 5px;
-            font-size: 11px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .template-action-btn:hover {
-            background: rgba(0,0,0,0.9);
-        }
-
-        #quick-actions-toolbar {
-            position: fixed;
-            top: 50%;
-            left: 20px;
-            transform: translateY(-50%);
-            background: white;
-            border-radius: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            padding: 10px;
-            z-index: 1001;
-            display: none;
-            flex-direction: column;
-            gap: 8px;
         }
 
         /* قالب الطباعة */
@@ -1828,7 +1728,7 @@
             </button>
             <img src="https://firebasestorage.googleapis.com/v0/b/messageemeapp.appspot.com/o/%D9%85%D9%84%D9%81%20%D8%B5%D9%88%D8%B1%20%D8%AA%D8%B7%D8%A8%D9%82%20%D8%A7%D9%84%D9%85%D8%B3%D8%AA%D8%B1%20%D8%B3%D9%85%D8%A7%20%D8%A8%D8%A7%D8%A8%D9%84%2Ffile_0000000077b4622f9294f80fafefb564%20(1).png?alt=media&token=d79da964-2f40-4edd-a17e-6f9c71816b49" alt="شعار المؤسسة">
             <div class="header-title">
-                <h1>نظام إدارة الحالات الخيرية المتكامل</h1>
+                <h1>نظام إدارة الحالات الخيرية</h1>
                 <p>مؤسسة أولاد الحسن (ع) الثقافية الخيرية</p>
             </div>
         </div>
@@ -1905,10 +1805,6 @@
                         <div class="nav-item" onclick="showSection('analytics')" role="button" tabindex="0">
                             <i class="fas fa-analytics"></i>
                             <span>الإحصائيات المتقدمة</span>
-                        </div>
-                        <div class="nav-item" onclick="showSection('print-manager')" role="button" tabindex="0">
-                            <i class="fas fa-print"></i>
-                            <span>إدارة الطباعة</span>
                         </div>
                     </div>
 
@@ -2357,9 +2253,9 @@
                                     <i class="fas fa-save"></i>
                                     حفظ البيانات
                                 </button>
-                                <button type="button" class="btn btn-primary" onclick="enhancedPrintPreviewWithAdvancedFeatures()">
+                                <button type="button" class="btn btn-primary" onclick="enhancedPrintPreview()">
                                     <i class="fas fa-print"></i>
-                                    معاينة الطباعة المتقدمة
+                                    معاينة الطباعة
                                 </button>
                                 <button type="button" class="btn btn-light" onclick="resetForm()">
                                     <i class="fas fa-redo"></i>
@@ -2371,115 +2267,6 @@
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            </section>
-
-            <!-- قسم إدارة الطباعة المتقدم -->
-            <section id="print-manager-section" class="content-section">
-                <div class="content-header">
-                    <h2>إدارة الطباعة المتقدمة</h2>
-                    <p>قوالب الطباعة، الإعدادات المتقدمة، والأدوات الذكية</p>
-                    <div class="breadcrumb">
-                        <a href="#" onclick="showSection('dashboard')">الرئيسية</a>
-                        <i class="fas fa-chevron-left"></i>
-                        <span>إدارة الطباعة</span>
-                    </div>
-                </div>
-
-                <div class="content-body">
-                    <!-- بطاقات الأدوات السريعة -->
-                    <div class="stats-grid">
-                        <div class="stat-card info">
-                            <div class="stat-header">
-                                <div class="stat-title">قوالب الطباعة</div>
-                                <div class="stat-icon info">
-                                    <i class="fas fa-templates"></i>
-                                </div>
-                            </div>
-                            <button class="btn btn-primary" onclick="showTemplateManager()" style="margin-top: 10px;">
-                                <i class="fas fa-templates"></i>
-                                إدارة القوالب
-                            </button>
-                        </div>
-
-                        <div class="stat-card success">
-                            <div class="stat-header">
-                                <div class="stat-title">الطباعة الذكية</div>
-                                <div class="stat-icon success">
-                                    <i class="fas fa-magic"></i>
-                                </div>
-                            </div>
-                            <button class="btn btn-success" onclick="showSmartPrintPanel()" style="margin-top: 10px;">
-                                <i class="fas fa-magic"></i>
-                                الإعدادات الذكية
-                            </button>
-                        </div>
-
-                        <div class="stat-card warning">
-                            <div class="stat-header">
-                                <div class="stat-title">الإصدارات</div>
-                                <div class="stat-icon warning">
-                                    <i class="fas fa-history"></i>
-                                </div>
-                            </div>
-                            <button class="btn btn-warning" onclick="showVersionManager()" style="margin-top: 10px;">
-                                <i class="fas fa-history"></i>
-                                إدارة الإصدارات
-                            </button>
-                        </div>
-
-                        <div class="stat-card danger">
-                            <div class="stat-header">
-                                <div class="stat-title">الطباعة المتعددة</div>
-                                <div class="stat-icon danger">
-                                    <i class="fas fa-layer-group"></i>
-                                </div>
-                            </div>
-                            <button class="btn btn-danger" onclick="showBatchPrintPanel()" style="margin-top: 10px;">
-                                <i class="fas fa-layer-group"></i>
-                                طباعة متعددة
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- إعدادات الطباعة السريعة -->
-                    <div class="form-container">
-                        <div class="form-header">
-                            <h3>إعدادات الطباعة السريعة</h3>
-                            <p>إعدادات أساسية للطباعة يمكن تطبيقها بسرعة</p>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">القالب الافتراضي</label>
-                                <select class="form-control" id="defaultTemplate" onchange="applyQuickTemplate()">
-                                    <option value="formal">رسمي</option>
-                                    <option value="modern">عصري</option>
-                                    <option value="compact">مضغوط</option>
-                                    <option value="colorful">ملون</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">جودة الطباعة</label>
-                                <select class="form-control" id="printQuality">
-                                    <option value="high">عالية الجودة</option>
-                                    <option value="medium">متوسطة</option>
-                                    <option value="draft">مسودة</option>
-                                </select>
-                            </div>
-                            </div>
-
-                        <div class="btn-group">
-                            <button class="btn btn-primary" onclick="applyQuickPrintSettings()">
-                                <i class="fas fa-check"></i>
-                                تطبيق الإعدادات
-                            </button>
-                            <button class="btn btn-secondary" onclick="resetPrintSettings()">
-                                <i class="fas fa-undo"></i>
-                                إعادة تعيين
-                            </button>
-                        </div>
                     </div>
                 </div>
             </section>
@@ -2996,310 +2783,60 @@
         </div>
     </div>
 
-        <!-- نافذة QR Scanner -->
-        <div class="modal" id="qrScannerModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title">مسح رمز QR</h3>
-                    <button class="modal-close" onclick="closeModal('qrScannerModal')" aria-label="إغلاق">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div style="text-align: center; padding: 40px;">
-                        <i class="fas fa-qrcode" style="font-size: 80px; color: #3498db; margin-bottom: 15px;"></i>
-                        <h3>مسح رمز QR</h3>
-                        <p>قم بتوجيه الكاميرا نحو رمز QR للبحث عن الحالة</p>
-                        <div id="qr-reader" style="margin-top: 15px;"></div>
-                        <button class="btn btn-primary" onclick="startQRScanner()">
-                            <i class="fas fa-camera"></i>
-                            تشغيل الكاميرا
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- نافذة مدير القوالب -->
-        <div class="modal" id="templateManagerModal">
-            <div class="modal-content" style="max-width: 800px;">
-                <div class="modal-header">
-                    <h3 class="modal-title">مدير القوالب</h3>
-                    <button class="modal-close" onclick="closeModal('templateManagerModal')" aria-label="إغلاق">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="templates-grid" id="templatesGrid">
-                        <!-- سيتم ملء القوالب ديناميكياً -->
-                    </div>
-                    
-                    <div style="margin-top: 20px; border-top: 1px solid #e3e6f0; padding-top: 20px;">
-                        <h4>إعدادات القالب المحدد</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">حجم الخط العام</label>
-                                <select class="form-control" id="templateFontSize">
-                                    <option value="12">صغير (12px)</option>
-                                    <option value="14">صغير متوسط (14px)</option>
-                                    <option value="16" selected>متوسط (16px)</option>
-                                    <option value="18">كبير (18px)</option>
-                                    <option value="20">كبير جداً (20px)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">لون الخط</label>
-                                <input type="color" class="form-control" id="templateFontColor" value="#000000">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">عرض الحدود</label>
-                                <select class="form-control" id="templateBorderWidth">
-                                    <option value="2">رفيع (2px)</option>
-                                    <option value="4">متوسط (4px)</option>
-                                    <option value="6" selected>سميك (6px)</option>
-                                    <option value="8">سميك جداً (8px)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">لون الحدود</label>
-                                <input type="color" class="form-control" id="templateBorderColor" value="#000000">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="btn-group" style="margin-top: 20px;">
-                        <button class="btn btn-success" onclick="applySelectedTemplate()">
-                            <i class="fas fa-check"></i>
-                            تطبيق القالب
-                        </button>
-                        <button class="btn btn-primary" onclick="previewTemplate()">
-                            <i class="fas fa-eye"></i>
-                            معاينة
-                        </button>
-                        <button class="btn btn-warning" onclick="saveCustomTemplate()">
-                            <i class="fas fa-save"></i>
-                            حفظ قالب مخصص
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- نافذة مدير الإصدارات -->
-        <div class="modal" id="versionManagerModal">
-            <div class="modal-content" style="max-width: 700px;">
-                <div class="modal-header">
-                    <h3 class="modal-title">مدير الإصدارات</h3>
-                    <button class="modal-close" onclick="closeModal('versionManagerModal')" aria-label="إغلاق">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div style="margin-bottom: 20px;">
-                        <h4>حفظ إصدار جديد</h4>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">اسم الإصدار</label>
-                                <input type="text" class="form-control" id="versionName" placeholder="مثال: تصميم رسمي محدث">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">وصف الإصدار</label>
-                                <input type="text" class="form-control" id="versionDescription" placeholder="وصف مختصر للتغييرات">
-                            </div>
-                        </div>
-                        <button class="btn btn-success" onclick="saveCurrentVersion()">
-                            <i class="fas fa-save"></i>
-                            حفظ الإصدار الحالي
-                        </button>
-                    </div>
-                    
-                    <div style="border-top: 1px solid #e3e6f0; padding-top: 20px;">
-                        <h4>الإصدارات المحفوظة</h4>
-                        <div id="versionsList" style="max-height: 300px; overflow-y: auto;">
-                            <!-- سيتم ملء الإصدارات ديناميكياً -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- نافذة الطباعة الذكية -->
-        <div class="modal" id="smartPrintModal">
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h3 class="modal-title">الطباعة الذكية</h3>
-                    <button class="modal-close" onclick="closeModal('smartPrintModal')" aria-label="إغلاق">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-section">
-                        <div class="form-section-title">إعدادات التحسين التلقائي</div>
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="autoOptimizeFont" checked style="margin-left: 8px;">
-                                <span>تحسين حجم الخط تلقائياً حسب المحتوى</span>
-                            </label>
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="autoOptimizeSpacing" checked style="margin-left: 8px;">
-                                <span>تحسين المسافات حسب عدد أفراد العائلة</span>
-                            </label>
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="autoOptimizeColors" style="margin-left: 8px;">
-                                <span>تحسين الألوان حسب نوع الحالة</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <div class="form-section-title">إعدادات الطباعة المتقدمة</div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">جودة الطباعة</label>
-                                <select class="form-control" id="smartPrintQuality">
-                                    <option value="draft">مسودة سريعة</option>
-                                    <option value="normal">عادية</option>
-                                    <option value="high" selected>عالية الجودة</option>
-                                    <option value="best">أفضل جودة</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">عدد النسخ</label>
-                                <input type="number" class="form-control" id="smartPrintCopies" value="1" min="1" max="10">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="executeSmartPrint()">
-                            <i class="fas fa-magic"></i>
-                            تطبيق وطباعة
-                        </button>
-                        <button class="btn btn-success" onclick="applySmartOptimizations()">
-                            <i class="fas fa-cogs"></i>
-                            تطبيق التحسينات فقط
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- نافذة الطباعة المتعددة -->
-        <div class="modal" id="batchPrintModal">
-            <div class="modal-content" style="max-width: 800px;">
-                <div class="modal-header">
-                    <h3 class="modal-title">الطباعة المتعددة</h3>
-                    <button class="modal-close" onclick="closeModal('batchPrintModal')" aria-label="إغلاق">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-section">
-                        <div class="form-section-title">اختيار الحالات للطباعة</div>
-                        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e3e6f0; border-radius: 8px; padding: 10px;">
-                            <div id="batchCasesList">
-                                <!-- سيتم ملء قائمة الحالات ديناميكياً -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-section">
-                        <div class="form-section-title">إعدادات الطباعة المتعددة</div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">القالب المستخدم</label>
-                                <select class="form-control" id="batchTemplate">
-                                    <option value="formal">رسمي</option>
-                                    <option value="modern">عصري</option>
-                                    <option value="compact">مضغوط</option>
-                                    <option value="colorful">ملون</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">ترتيب الطباعة</label>
-                                <select class="form-control" id="batchSortOrder">
-                                    <option value="date_desc">الأحدث أولاً</option>
-                                    <option value="date_asc">الأقدم أولاً</option>
-                                    <option value="name_asc">حسب الاسم (أ-ي)</option>
-                                    <option value="amount_desc">المبلغ الأكبر أولاً</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" id="batchSeparatePages" checked style="margin-left: 8px;">
-                                <span>صفحة منفصلة لكل حالة</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="startBatchPrint()" id="startBatchBtn">
-                            <i class="fas fa-print"></i>
-                            بدء الطباعة المتعددة
-                        </button>
-                        <button class="btn btn-success" onclick="selectAllCases()">
-                            <i class="fas fa-check-double"></i>
-                            تحديد الكل
-                        </button>
-                        <button class="btn btn-light" onclick="clearCaseSelection()">
-                            <i class="fas fa-times"></i>
-                            إلغاء التحديد
-                        </button>
-                    </div>
-                    
-                    <div id="batchProgress" style="display: none; margin-top: 20px;">
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                            <h5>جاري الطباعة...</h5>
-                            <div style="background: #e9ecef; height: 10px; border-radius: 5px; overflow: hidden;">
-                                <div id="batchProgressBar" style="background: #007bff; height: 100%; width: 0%; transition: width 0.3s;"></div>
-                            </div>
-                            <p id="batchProgressText" style="margin-top: 10px; margin-bottom: 0;">تحضير الطباعة...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- نافذة معاينة الطباعة المحسنة -->
-        <div id="print-preview-container">
-            <div id="print-preview-content">
-                <!-- سيتم إنشاء المحتوى ديناميكياً -->
-            </div>
-            <div id="print-preview-close" onclick="closePrintPreview()" aria-label="إغلاق المعاينة">
-                <i class="fas fa-times"></i>
-            </div>
-            <div id="print-preview-actions">
-                <button class="btn btn-primary" onclick="printFromPreview()">
-                    <i class="fas fa-print"></i>
-                    <span>طباعة</span>
-                </button>
-                <button class="btn btn-light" onclick="closePrintPreview()">
+    <!-- نافذة QR Scanner -->
+    <div class="modal" id="qrScannerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">مسح رمز QR</h3>
+                <button class="modal-close" onclick="closeModal('qrScannerModal')" aria-label="إغلاق">
                     <i class="fas fa-times"></i>
-                    <span>إلغاء</span>
                 </button>
             </div>
+            <div class="modal-body">
+                <div style="text-align: center; padding: 40px;">
+                    <i class="fas fa-qrcode" style="font-size: 80px; color: #3498db; margin-bottom: 15px;"></i>
+                    <h3>مسح رمز QR</h3>
+                    <p>قم بتوجيه الكاميرا نحو رمز QR للبحث عن الحالة</p>
+                    <div id="qr-reader" style="margin-top: 15px;"></div>
+                    <button class="btn btn-primary" onclick="startQRScanner()">
+                        <i class="fas fa-camera"></i>
+                        تشغيل الكاميرا
+                    </button>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <!-- حاوية الإشعارات -->
-        <div class="toast-container" id="toast-container" aria-live="polite"></div>
-        
-        <!-- الزر العائم -->
-        <div class="floating-action" onclick="showSection('create-case')" title="إنشاء حالة جديدة" aria-label="إنشاء حالة جديدة">
-            <i class="fas fa-plus"></i>
+    <!-- نافذة معاينة الطباعة المحسنة -->
+    <div id="print-preview-container">
+        <div id="print-preview-content">
+            <!-- سيتم إنشاء المحتوى ديناميكياً -->
         </div>
+        <div id="print-preview-close" onclick="closePrintPreview()" aria-label="إغلاق المعاينة">
+            <i class="fas fa-times"></i>
+        </div>
+        <div id="print-preview-actions">
+            <button class="btn btn-primary" onclick="printFromPreview()">
+                <i class="fas fa-print"></i>
+                <span>طباعة</span>
+            </button>
+            <button class="btn btn-light" onclick="closePrintPreview()">
+                <i class="fas fa-times"></i>
+                <span>إلغاء</span>
+            </button>
+        </div>
+    </div>
 
-        <!-- طبقة تراكبية للشريط الجانبي في الهواتف -->
-        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <!-- حاوية الإشعارات -->
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+    
+    <!-- الزر العائم -->
+    <div class="floating-action" onclick="showSection('create-case')" title="إنشاء حالة جديدة" aria-label="إنشاء حالة جديدة">
+        <i class="fas fa-plus"></i>
+    </div>
 
-
-        
+    <!-- طبقة تراكبية للشريط الجانبي في الهواتف -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
     <script>
         // ==============================
@@ -3313,7 +2850,7 @@
             orgName: 'مؤسسة أولاد الحسن (ع) الثقافية الخيرية',
             manager1: 'السيد أسامة السعبري',
             manager2: 'السيد فؤاد السعبري',
-            defaultOrganizer: 'أبو كرار',
+            defaultOrganizer: 'أبو كرrar',
             defaultFontSize: '16',
             autoFormNumber: 'yes',
             showQRCode: 'yes'
@@ -3324,510 +2861,11 @@
             CASES: 'charity_cases_data',
             SETTINGS: 'charity_settings',
             BACKUP: 'charity_backup',
-            VERSION: 'charity_version',
-            PRINT_SETTINGS: 'charity_print_settings',
-            TEMPLATES: 'charity_templates',
-            SMART_PRINT: 'smart_print_settings'
+            VERSION: 'charity_version'
         };
 
         // رقم إصدار التطبيق
         const APP_VERSION = '2.1.0';
-
-        // ==============================
-        // إعدادات الطباعة المتقدمة
-        // ==============================
-
-        // قوالب الطباعة الجاهزة
-        const printTemplates = {
-            formal: {
-                name: 'رسمي',
-                description: 'قالب رسمي للوثائق الحكومية',
-                settings: {
-                    fonts: {
-                        headerFont: 'Times New Roman',
-                        contentFont: 'Times New Roman',
-                        headerSize: 18,
-                        contentSize: 14,
-                        headerWeight: 'bold',
-                        contentWeight: 'normal',
-                        headerColor: '#000000',
-                        contentColor: '#000000'
-                    },
-                    spacing: {
-                        marginTop: 50,
-                        marginBottom: 30,
-                        marginLeft: 25,
-                        marginRight: 25,
-                        lineHeight: 1.6,
-                        paragraphSpacing: 12,
-                        sectionSpacing: 20,
-                        cellPadding: 8
-                    },
-                    borders: {
-                        outerBorderWidth: 8,
-                        innerBorderWidth: 2,
-                        borderColor: '#000000',
-                        borderStyle: 'solid',
-                        borderRadius: 0,
-                        cellBorders: true,
-                        headerBorders: true
-                    },
-                    colors: {
-                        headerBgSayed: '#e8f5e8',
-                        headerBgExpenses: '#fff8dc',
-                        headerBgGeneral: '#e6f3ff',
-                        paperBg: '#ffffff'
-                    }
-                }
-            },
-            
-            modern: {
-                name: 'عصري',
-                description: 'قالب عصري بتصميم جذاب',
-                settings: {
-                    fonts: {
-                        headerFont: 'Arial',
-                        contentFont: 'Arial',
-                        headerSize: 16,
-                        contentSize: 15,
-                        headerWeight: 'bold',
-                        contentWeight: 'normal',
-                        headerColor: '#2c3e50',
-                        contentColor: '#34495e'
-                    },
-                    spacing: {
-                        marginTop: 35,
-                        marginBottom: 20,
-                        marginLeft: 20,
-                        marginRight: 20,
-                        lineHeight: 1.5,
-                        paragraphSpacing: 8,
-                        sectionSpacing: 12,
-                        cellPadding: 6
-                    },
-                    borders: {
-                        outerBorderWidth: 4,
-                        innerBorderWidth: 1,
-                        borderColor: '#3498db',
-                        borderStyle: 'solid',
-                        borderRadius: 15,
-                        cellBorders: false,
-                        headerBorders: true
-                    },
-                    colors: {
-                        headerBgSayed: '#d5f4e6',
-                        headerBgExpenses: '#fff3cd',
-                        headerBgGeneral: '#cce5ff',
-                        paperBg: '#fdfdfd'
-                    }
-                }
-            },
-            
-            compact: {
-                name: 'مضغوط',
-                description: 'قالب مضغوط لتوفير المساحة',
-                settings: {
-                    fonts: {
-                        headerFont: 'Tahoma',
-                        contentFont: 'Tahoma',
-                        headerSize: 14,
-                        contentSize: 12,
-                        headerWeight: 'bold',
-                        contentWeight: 'normal',
-                        headerColor: '#000000',
-                        contentColor: '#000000'
-                    },
-                    spacing: {
-                        marginTop: 25,
-                        marginBottom: 15,
-                        marginLeft: 15,
-                        marginRight: 15,
-                        lineHeight: 1.3,
-                        paragraphSpacing: 5,
-                        sectionSpacing: 8,
-                        cellPadding: 4
-                    },
-                    borders: {
-                        outerBorderWidth: 3,
-                        innerBorderWidth: 1,
-                        borderColor: '#000000',
-                        borderStyle: 'solid',
-                        borderRadius: 8,
-                        cellBorders: true,
-                        headerBorders: true
-                    },
-                    colors: {
-                        headerBgSayed: '#f0f8f0',
-                        headerBgExpenses: '#fffaf0',
-                        headerBgGeneral: '#f0f8ff',
-                        paperBg: '#ffffff'
-                    }
-                }
-            },
-            
-            colorful: {
-                name: 'ملون',
-                description: 'قالب ملون وجذاب',
-                settings: {
-                    fonts: {
-                        headerFont: 'Verdana',
-                        contentFont: 'Verdana',
-                        headerSize: 15,
-                        contentSize: 13,
-                        headerWeight: 'bold',
-                        contentWeight: 'normal',
-                        headerColor: '#ffffff',
-                        contentColor: '#2c3e50'
-                    },
-                    spacing: {
-                        marginTop: 40,
-                        marginBottom: 25,
-                        marginLeft: 22,
-                        marginRight: 22,
-                        lineHeight: 1.4,
-                        paragraphSpacing: 10,
-                        sectionSpacing: 15,
-                        cellPadding: 7
-                    },
-                    borders: {
-                        outerBorderWidth: 6,
-                        innerBorderWidth: 2,
-                        borderColor: '#e74c3c',
-                        borderStyle: 'solid',
-                        borderRadius: 12,
-                        cellBorders: true,
-                        headerBorders: true
-                    },
-                    colors: {
-                        headerBgSayed: '#2ecc71',
-                        headerBgExpenses: '#f39c12',
-                        headerBgGeneral: '#3498db',
-                        paperBg: '#fefefe'
-                    }
-                }
-            }
-        };
-
-        // إعدادات الطباعة الذكية
-        let smartPrintSettings = {
-            autoPrint: {
-                enabled: false,
-                delay: 2000,
-                copies: 1,
-                quality: 'high'
-            },
-            autoOptimize: {
-                enabled: true,
-                fontSizeOptimization: true,
-                spacingOptimization: true,
-                borderOptimization: true,
-                colorOptimization: true
-            },
-            batchPrint: {
-                enabled: false,
-                cases: [],
-                template: 'default',
-                separatePages: true
-            },
-            preview3D: {
-                enabled: false,
-                angle: 15,
-                shadow: true,
-                reflection: false,
-                backgroundColor: '#f0f0f0'
-            },
-            autoSave: {
-                enabled: true,
-                interval: 30000,
-                versions: 5
-            }
-        };
-
-        // ==============================
-        // مدير القوالب
-        // ==============================
-        class TemplateManager {
-            constructor() {
-                this.templates = printTemplates;
-                this.currentTemplate = null;
-            }
-            
-            applyTemplate(templateName) {
-                if (!this.templates[templateName]) {
-                    showToast('القالب غير موجود', 'error');
-                    return false;
-                }
-                
-                const template = this.templates[templateName];
-                this.currentTemplate = templateName;
-                
-                // تطبيق الإعدادات
-                showToast(`تم تطبيق قالب "${template.name}" بنجاح`, 'success');
-                return true;
-            }
-            
-            saveTemplate(name, description) {
-                const newTemplate = {
-                    name: name,
-                    description: description,
-                    settings: {},
-                    createdAt: new Date().toISOString(),
-                    custom: true
-                };
-                
-                this.templates[name.toLowerCase().replace(/\s+/g, '_')] = newTemplate;
-                
-                localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(this.templates));
-                
-                showToast(`تم حفظ القالب "${name}" بنجاح`, 'success');
-                return true;
-            }
-            
-            deleteTemplate(templateName) {
-                if (!this.templates[templateName] || !this.templates[templateName].custom) {
-                    showToast('لا يمكن حذف القوالب الافتراضية', 'error');
-                    return false;
-                }
-                
-                delete this.templates[templateName];
-                localStorage.setItem(STORAGE_KEYS.TEMPLATES, JSON.stringify(this.templates));
-                
-                showToast('تم حذف القالب بنجاح', 'success');
-                return true;
-            }
-            
-            loadCustomTemplates() {
-                try {
-                    const customTemplates = localStorage.getItem(STORAGE_KEYS.TEMPLATES);
-                    if (customTemplates) {
-                        const parsed = JSON.parse(customTemplates);
-                        this.templates = {...this.templates, ...parsed};
-                    }
-                } catch (error) {
-                    console.error('خطأ في تحميل القوالب المخصصة:', error);
-                }
-            }
-            
-            getTemplatesList() {
-                return Object.keys(this.templates).map(key => ({
-                    key: key,
-                    name: this.templates[key].name,
-                    description: this.templates[key].description,
-                    custom: this.templates[key].custom || false
-                }));
-            }
-        }
-
-        // ==============================
-        // مدير الطباعة الذكية
-        // ==============================
-        class SmartPrintManager {
-            constructor() {
-                this.printQueue = [];
-                this.isProcessing = false;
-                this.settings = smartPrintSettings;
-            }
-            
-            async smartPrint(caseData) {
-                if (this.settings.autoOptimize.enabled) {
-                    await this.optimizePrintSettings(caseData);
-                }
-                
-                if (this.settings.autoPrint.enabled) {
-                    setTimeout(() => {
-                        this.executePrint();
-                    }, this.settings.autoPrint.delay);
-                }
-            }
-            
-            async batchPrint(cases) {
-                if (!this.settings.batchPrint.enabled) {
-                    showToast('الطباعة المتعددة غير مفعلة', 'warning');
-                    return;
-                }
-                
-                this.printQueue = cases;
-                this.isProcessing = true;
-                
-                showToast(`بدء طباعة ${cases.length} حالة`, 'info');
-                
-                for (let i = 0; i < cases.length; i++) {
-                    const caseData = cases[i];
-                    
-                    if (this.settings.batchPrint.separatePages && i > 0) {
-                        this.insertPageBreak();
-                    }
-                    
-                    await this.createPrintContent(caseData);
-                    this.updateProgress(i + 1, cases.length);
-                }
-                
-                this.isProcessing = false;
-                showToast('تم إكمال الطباعة المتعددة', 'success');
-            }
-            
-            async optimizePrintSettings(caseData) {
-                if (this.settings.autoOptimize.fontSizeOptimization) {
-                    this.optimizeFontSize(caseData);
-                }
-                
-                if (this.settings.autoOptimize.spacingOptimization) {
-                    this.optimizeSpacing(caseData);
-                }
-            }
-            
-            optimizeFontSize(caseData) {
-                const contentLength = this.calculateContentLength(caseData);
-                
-                if (contentLength > 2000) {
-                    console.log('تم تحسين حجم الخط للمحتوى الطويل');
-                } else if (contentLength < 800) {
-                    console.log('تم تحسين حجم الخط للمحتوى القصير');
-                }
-            }
-            
-            optimizeSpacing(caseData) {
-                const familyMembersCount = this.calculateFamilyMembersCount(caseData);
-                
-                if (familyMembersCount > 8) {
-                    console.log('تم تحسين المسافات للعائلة الكبيرة');
-                }
-            }
-            
-            calculateContentLength(caseData) {
-                let length = 0;
-                Object.values(caseData).forEach(value => {
-                    if (typeof value === 'string') {
-                        length += value.length;
-                    }
-                });
-                return length;
-            }
-            
-            calculateFamilyMembersCount(caseData) {
-                const maleChildren = parseInt(caseData.maleChildren) || 0;
-                const femaleChildren = parseInt(caseData.femaleChildren) || 0;
-                const married = parseInt(caseData.married) || 0;
-                
-                return maleChildren + femaleChildren + married;
-            }
-            
-            insertPageBreak() {
-                const pageBreak = document.createElement('div');
-                pageBreak.style.cssText = 'page-break-before: always; height: 0; margin: 0; padding: 0;';
-                
-                const printContent = document.getElementById('print-preview-content');
-                if (printContent) {
-                    printContent.appendChild(pageBreak);
-                }
-            }
-            
-            async createPrintContent(caseData) {
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        resolve();
-                    }, 100);
-                });
-            }
-            
-            updateProgress(current, total) {
-                const percentage = Math.round((current / total) * 100);
-                showToast(`جاري الطباعة... ${percentage}% (${current}/${total})`, 'info');
-            }
-            
-            executePrint() {
-                window.print();
-            }
-        }
-
-        // ==============================
-        // مدير الحفظ التلقائي للإعدادات
-        // ==============================
-        class AutoSaveManager {
-            constructor() {
-                this.settings = smartPrintSettings.autoSave;
-                this.versions = [];
-                this.currentVersion = 0;
-                this.saveInterval = null;
-                
-                if (this.settings.enabled) {
-                    this.start();
-                }
-            }
-            
-            start() {
-                this.saveInterval = setInterval(() => {
-                    this.saveVersion();
-                }, this.settings.interval);
-                
-                console.log('✅ تم بدء الحفظ التلقائي للإعدادات');
-            }
-            
-            stop() {
-                if (this.saveInterval) {
-                    clearInterval(this.saveInterval);
-                    this.saveInterval = null;
-                }
-                
-                console.log('⏹️ تم إيقاف الحفظ التلقائي للإعدادات');
-            }
-            
-            saveVersion() {
-                const version = {
-                    timestamp: new Date().toISOString(),
-                    settings: JSON.parse(JSON.stringify(systemSettings)),
-                    version: this.currentVersion++
-                };
-                
-                this.versions.push(version);
-                
-                if (this.versions.length > this.settings.versions) {
-                    this.versions.shift();
-                }
-                
-                localStorage.setItem('print_settings_versions', JSON.stringify(this.versions));
-            }
-            
-            restoreVersion(versionIndex) {
-                if (versionIndex >= 0 && versionIndex < this.versions.length) {
-                    const version = this.versions[versionIndex];
-                    systemSettings = JSON.parse(JSON.stringify(version.settings));
-                    
-                    const date = new Date(version.timestamp).toLocaleString('ar-EG');
-                    showToast(`تم استعادة الإعدادات من ${date}`, 'success');
-                    
-                    return true;
-                }
-                
-                return false;
-            }
-            
-            loadVersions() {
-                try {
-                    const savedVersions = localStorage.getItem('print_settings_versions');
-                    if (savedVersions) {
-                        this.versions = JSON.parse(savedVersions);
-                        this.currentVersion = this.versions.length;
-                    }
-                } catch (error) {
-                    console.error('خطأ في تحميل إصدارات الإعدادات:', error);
-                }
-            }
-            
-            getVersionsList() {
-                return this.versions.map((version, index) => ({
-                    index: index,
-                    timestamp: version.timestamp,
-                    date: new Date(version.timestamp).toLocaleString('ar-EG'),
-                    version: version.version
-                }));
-            }
-        }
-
-        // إنشاء المدراء
-        const templateManager = new TemplateManager();
-        const smartPrintManager = new SmartPrintManager();
-        const autoSaveManager = new AutoSaveManager();
 
         // ==============================
         // تهيئة النظام عند تحميل الصفحة
@@ -3837,8 +2875,9 @@
             setupEventListeners();
             handleResize();
             
+            // رسالة ترحيب
             setTimeout(() => {
-                showToast('مرحباً بك في النظام المُحدث مع نظام الطباعة المتقدم!', 'success', 'تم التحميل بنجاح');
+                showToast('مرحباً بك في النظام المُحدث مع التخزين المحلي الكامل!', 'success', 'تم التحميل بنجاح');
             }, 1000);
         });
 
@@ -3847,14 +2886,20 @@
         // ==============================
         function initializeSystem() {
             try {
+                // تحميل البيانات من التخزين المحلي
                 loadFromLocalStorage();
-                initializeUI();
-                updateStatistics();
-                initializeCharts();
-                startAutoSave();
                 
-                // تهيئة نظام الطباعة المتقدم
-                initializeAdvancedPrintSystem();
+                // تهيئة واجهة المستخدم
+                initializeUI();
+                
+                // تحديث الإحصائيات
+                updateStatistics();
+                
+                // تهيئة الرسوم البيانية
+                initializeCharts();
+                
+                // بدء الحفظ التلقائي
+                startAutoSave();
                 
                 console.log('✅ تم تهيئة النظام بنجاح');
                 console.log(`📊 تم تحميل ${casesData.length} حالة من التخزين المحلي`);
@@ -3863,36 +2908,37 @@
                 console.error('❌ خطأ في تهيئة النظام:', error);
                 showToast('حدث خطأ في تهيئة النظام', 'error');
                 
+                // إعادة تعيين البيانات في حالة الخطأ
                 casesData = [];
                 systemSettings = getDefaultSettings();
             }
-        }
-
-        // تهيئة نظام الطباعة المتقدم
-        function initializeAdvancedPrintSystem() {
-            loadSmartPrintSettings();
-            templateManager.loadCustomTemplates();
-            autoSaveManager.loadVersions();
-            addQuickActionButtons();
-            
-            console.log('🖨️ تم تهيئة نظام الطباعة المتقدم');
         }
 
         // ==============================
         // تهيئة واجهة المستخدم
         // ==============================
         function initializeUI() {
+            // تحديث المنظم من الإعدادات
             updateOrganizerFromSettings();
+            
+            // تعيين تاريخ اليوم
             setTodayDate();
+            
+            // توليد رقم الاستمارة
             generateFormNumber();
+            
+            // تحديث لوحة التحكم
             updateDashboard();
         }
 
         // ==============================
         // وظائف التخزين المحلي المُحسنة
         // ==============================
+
+        // حفظ البيانات في التخزين المحلي
         function saveToLocalStorage() {
             try {
+                // حفظ الحالات
                 const casesWithMetadata = {
                     data: casesData,
                     lastSaved: new Date().toISOString(),
@@ -3901,6 +2947,7 @@
                 };
                 localStorage.setItem(STORAGE_KEYS.CASES, JSON.stringify(casesWithMetadata));
                 
+                // حفظ الإعدادات
                 const settingsWithMetadata = {
                     ...systemSettings,
                     lastUpdated: new Date().toISOString(),
@@ -3908,6 +2955,7 @@
                 };
                 localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settingsWithMetadata));
                 
+                // حفظ رقم الإصدار
                 localStorage.setItem(STORAGE_KEYS.VERSION, APP_VERSION);
                 
                 console.log('💾 تم حفظ البيانات في التخزين المحلي');
@@ -3916,6 +2964,7 @@
             } catch (error) {
                 console.error('❌ خطأ في حفظ البيانات:', error);
                 
+                // إشعار المستخدم بالمشكلة
                 if (error.name === 'QuotaExceededError') {
                     showToast('مساحة التخزين ممتلئة. يرجى تنظيف البيانات القديمة.', 'warning');
                 } else {
@@ -3925,18 +2974,22 @@
             }
         }
 
+        // تحميل البيانات من التخزين المحلي
         function loadFromLocalStorage() {
             try {
+                // تحميل الحالات
                 const savedCases = localStorage.getItem(STORAGE_KEYS.CASES);
                 if (savedCases) {
                     const casesData_parsed = JSON.parse(savedCases);
                     
+                    // التحقق من صحة البيانات
                     if (casesData_parsed.data && Array.isArray(casesData_parsed.data)) {
                         casesData = casesData_parsed.data;
                         console.log(`📥 تم تحميل ${casesData.length} حالة من التخزين المحلي`);
                     }
                 }
                 
+                // تحميل الإعدادات
                 const savedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
                 if (savedSettings) {
                     const settingsData = JSON.parse(savedSettings);
@@ -3944,6 +2997,7 @@
                     console.log('⚙️ تم تحميل الإعدادات من التخزين المحلي');
                 }
                 
+                // التحقق من الإصدار
                 const savedVersion = localStorage.getItem(STORAGE_KEYS.VERSION);
                 if (savedVersion !== APP_VERSION) {
                     console.log('🔄 تم اكتشاف إصدار جديد، يتم تحديث البيانات...');
@@ -3953,6 +3007,7 @@
             } catch (error) {
                 console.error('❌ خطأ في تحميل البيانات:', error);
                 
+                // استخدام البيانات الافتراضية
                 casesData = [];
                 systemSettings = getDefaultSettings();
                 
@@ -3960,6 +3015,7 @@
             }
         }
 
+        // الحصول على الإعدادات الافتراضية
         function getDefaultSettings() {
             return {
                 orgName: 'مؤسسة أولاد الحسن (ع) الثقافية الخيرية',
@@ -3974,11 +3030,14 @@
             };
         }
 
+        // ترحيل البيانات بين الإصدارات
         function migrateData(oldVersion, newVersion) {
             try {
                 console.log(`🔄 ترحيل البيانات من الإصدار ${oldVersion} إلى ${newVersion}`);
                 
+                // إضافة أي تحديثات مطلوبة للبيانات هنا
                 casesData.forEach(caseItem => {
+                    // إضافة حقول جديدة إذا لم تكن موجودة
                     if (!caseItem.id) {
                         caseItem.id = generateUniqueId();
                     }
@@ -3993,6 +3052,7 @@
                     }
                 });
                 
+                // حفظ البيانات المحدثة
                 saveToLocalStorage();
                 
                 showToast('تم تحديث البيانات بنجاح للإصدار الجديد', 'success');
@@ -4003,6 +3063,7 @@
             }
         }
 
+        // مسح جميع البيانات المحلية
         function clearLocalStorage() {
             try {
                 Object.values(STORAGE_KEYS).forEach(key => {
@@ -4025,10 +3086,13 @@
         let lastSaveTime = Date.now();
 
         function startAutoSave() {
+            // حفظ تلقائي كل 30 ثانية
             autoSaveInterval = setInterval(() => {
                 if (casesData.length > 0) {
                     saveToLocalStorage();
                     lastSaveTime = Date.now();
+                    
+                    // إظهار مؤشر الحفظ
                     showSaveIndicator();
                 }
             }, 30000);
@@ -4045,6 +3109,7 @@
         }
 
         function showSaveIndicator() {
+            // إنشاء مؤشر بصري للحفظ
             const indicator = document.createElement('div');
             indicator.innerHTML = '<i class="fas fa-save"></i> تم الحفظ';
             indicator.style.cssText = `
@@ -4063,8 +3128,10 @@
             
             document.body.appendChild(indicator);
             
+            // إظهار المؤشر
             setTimeout(() => indicator.style.opacity = '1', 100);
             
+            // إخفاء المؤشر بعد ثانيتين
             setTimeout(() => {
                 indicator.style.opacity = '0';
                 setTimeout(() => {
@@ -4079,29 +3146,41 @@
         // إعداد مستمعي الأحداث المُحسنة
         // ==============================
         function setupEventListeners() {
+            // البحث السريع
             const searchInput = document.getElementById('globalSearch');
             if (searchInput) {
                 searchInput.addEventListener('input', debounce(performSearch, 300));
             }
 
+            // مراقبة تغييرات النموذج للحفظ الفوري
             const form = document.getElementById('case-form');
             if (form) {
                 form.addEventListener('input', debounce(markFormDirty, 1000));
                 form.addEventListener('change', debounce(markFormDirty, 1000));
             }
 
+            // إعداد أحداث لوحة المفاتيح
             setupKeyboardShortcuts();
+            
+            // إعداد أحداث اللمس للهواتف
             setupTouchEvents();
+            
+            // مراقبة الاتصال بالإنترنت
             setupNetworkMonitoring();
+            
+            // مراقبة حالة التخزين
             setupStorageMonitoring();
         }
 
+        // إعداد اختصارات لوحة المفاتيح
         function setupKeyboardShortcuts() {
             document.addEventListener('keydown', function(e) {
+                // منع الاختصارات إذا كان المستخدم يكتب في حقل إدخال
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                     return;
                 }
                 
+                // Ctrl/Cmd + S للحفظ
                 if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                     e.preventDefault();
                     if (currentSection === 'create-case') {
@@ -4109,23 +3188,27 @@
                     }
                 }
                 
+                // Ctrl/Cmd + N لحالة جديدة
                 if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
                     e.preventDefault();
                     showSection('create-case');
                     resetForm();
                 }
                 
+                // Ctrl/Cmd + P للطباعة
                 if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
                     e.preventDefault();
                     if (currentSection === 'create-case') {
-                        enhancedPrintPreviewWithAdvancedFeatures();
+                        enhancedPrintPreview();
                     }
                 }
                 
+                // Escape لإغلاق النوافذ المنبثقة
                 if (e.key === 'Escape') {
                     closeAllModals();
                 }
                 
+                // أسهم التنقل
                 if (e.key === 'ArrowLeft' && e.altKey) {
                     e.preventDefault();
                     navigateSections('prev');
@@ -4138,9 +3221,11 @@
             });
         }
 
+        // إعداد أحداث اللمس للهواتف
         function setupTouchEvents() {
             let startX, startY;
             
+            // إيماءة السحب للشريط الجانبي
             document.addEventListener('touchstart', function(e) {
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
@@ -4155,7 +3240,9 @@
                 const diffX = startX - endX;
                 const diffY = startY - endY;
                 
+                // السحب الأفقي أكبر من العمودي
                 if (Math.abs(diffX) > Math.abs(diffY)) {
+                    // السحب من اليمين لليسار - إغلاق الشريط الجانبي
                     if (diffX > 50 && startX < 100) {
                         const sidebar = document.getElementById('sidebar');
                         if (sidebar.classList.contains('show')) {
@@ -4163,6 +3250,7 @@
                         }
                     }
                     
+                    // السحب من اليسار لليمين - فتح الشريط الجانبي
                     if (diffX < -50 && startX > window.innerWidth - 100) {
                         const sidebar = document.getElementById('sidebar');
                         if (!sidebar.classList.contains('show')) {
@@ -4176,6 +3264,7 @@
             });
         }
 
+        // مراقبة الاتصال بالإنترنت
         function setupNetworkMonitoring() {
             window.addEventListener('online', function() {
                 showToast('تم استعادة الاتصال بالإنترنت', 'success', 'متصل');
@@ -4186,7 +3275,9 @@
             });
         }
 
+        // مراقبة حالة التخزين
         function setupStorageMonitoring() {
+            // التحقق من مساحة التخزين المتاحة
             if ('storage' in navigator && 'estimate' in navigator.storage) {
                 navigator.storage.estimate().then(estimate => {
                     const usage = estimate.usage;
@@ -4195,6 +3286,7 @@
                     
                     console.log(`💾 استخدام التخزين: ${(usage / 1024 / 1024).toFixed(2)} MB من ${(quota / 1024 / 1024).toFixed(2)} MB (${percentUsed.toFixed(1)}%)`);
                     
+                    // تنبيه إذا كان الاستخدام أكثر من 80%
                     if (percentUsed > 80) {
                         showToast('مساحة التخزين تقترب من الامتلاء', 'warning');
                     }
@@ -4231,6 +3323,7 @@
                     mainContent.style.marginRight = '280px';
                 }
                 
+                // تحديث نص الأزرار عند الانطوي
                 const qrText = document.getElementById('qr-text');
                 if (qrText) {
                     qrText.style.display = sidebarCollapsed ? 'none' : 'inline';
@@ -4242,31 +3335,40 @@
         // إدارة الأقسام المُحسنة
         // ==============================
         function showSection(sectionName) {
+            // حفظ البيانات قبل التنقل
             if (currentSection === 'create-case') {
                 const formData = getFormData();
                 if (formData.fullName || formData.caseType) {
+                    // حفظ مسودة تلقائياً
                     saveDraft(formData);
                 }
             }
             
+            // إخفاء جميع الأقسام
             const sections = document.querySelectorAll('.content-section');
             sections.forEach(section => {
                 section.classList.remove('active');
                 section.style.display = 'none';
             });
 
+            // إظهار القسم المطلوب
             const targetSection = document.getElementById(sectionName + '-section');
             if (targetSection) {
                 targetSection.classList.add('active');
                 targetSection.style.display = 'block';
                 currentSection = sectionName;
                 
+                // تحديث عنوان الصفحة
                 updatePageTitle(sectionName);
             }
 
+            // تحديث حالة عناصر التنقل
             updateNavigationState(sectionName);
+
+            // تحديث المحتوى حسب القسم
             handleSectionSpecificActions(sectionName);
 
+            // إغلاق الشريط الجانبي في الأجهزة المحمولة
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
                 const overlay = document.getElementById('sidebarOverlay');
@@ -4275,6 +3377,7 @@
                 if (overlay) overlay.style.display = 'none';
             }
             
+            // تحديث URL (اختياري)
             updateURL(sectionName);
         }
 
@@ -4289,12 +3392,11 @@
                 'analytics': 'الإحصائيات المتقدمة',
                 'export': 'التصدير والاستيراد',
                 'settings': 'الإعدادات',
-                'backup': 'النسخ الاحتياطي',
-                'print-manager': 'إدارة الطباعة المتقدمة'
+                'backup': 'النسخ الاحتياطي'
             };
             
             const title = titles[sectionName] || 'نظام إدارة الحالات الخيرية';
-            document.title = `${title} - نظام إدارة الحالات الخيرية المتكامل`;
+            document.title = `${title} - نظام إدارة الحالات الخيرية`;
         }
 
         function updateNavigationState(sectionName) {
@@ -4315,6 +3417,7 @@
                     updateDashboard();
                     break;
                 case 'create-case':
+                    // استعادة المسودة إذا كانت متوفرة
                     restoreDraft();
                     break;
                 case 'reports':
@@ -4335,13 +3438,11 @@
                 case 'settings':
                     loadSettingsToForm();
                     break;
-                case 'print-manager':
-                    initializePrintManager();
-                    break;
             }
         }
 
         function updateURL(sectionName) {
+            // تحديث URL بدون إعادة تحميل الصفحة
             if (history.pushState) {
                 const url = new URL(window.location);
                 url.searchParams.set('section', sectionName);
@@ -4349,8 +3450,9 @@
             }
         }
 
+        // التنقل بين الأقسام
         function navigateSections(direction) {
-            const sections = ['dashboard', 'create-case', 'cases-sayed', 'cases-expenses', 'cases-general', 'reports', 'analytics', 'export', 'print-manager', 'settings', 'backup'];
+            const sections = ['dashboard', 'create-case', 'cases-sayed', 'cases-expenses', 'cases-general', 'reports', 'analytics', 'export', 'settings', 'backup'];
             const currentIndex = sections.indexOf(currentSection);
             
             let newIndex;
@@ -4389,12 +3491,14 @@
                     const draft = JSON.parse(savedDraft);
                     const draftAge = Date.now() - new Date(draft.timestamp).getTime();
                     
+                    // استعادة المسودة إذا كانت أقل من 24 ساعة
                     if (draftAge < 24 * 60 * 60 * 1000) {
                         if (confirm('تم العثور على مسودة محفوظة. هل تريد استعادتها؟')) {
                             fillFormWithData(draft.data);
                             showToast('تم استعادة المسودة', 'success');
                         }
                     } else {
+                        // حذف المسودة القديمة
                         localStorage.removeItem('charity_draft');
                     }
                 }
@@ -4413,10 +3517,12 @@
         // ==============================
         function saveForm() {
             try {
+                // إظهار مؤشر التحميل
                 showLoadingState(true);
                 
                 const formData = getFormData();
                 
+                // التحقق من صحة البيانات
                 if (!validateFormData(formData)) {
                     showLoadingState(false);
                     return;
@@ -4426,7 +3532,9 @@
                 const editId = form.getAttribute('data-edit-id');
                 
                 if (editId) {
+                    // وضع التعديل
                     if (updateExistingCase(editId, formData)) {
+                        // حفظ فوري في التخزين المحلي
                         saveToLocalStorage();
                         
                         showToast('تم تحديث الحالة وحفظها محلياً بنجاح!', 'success', 'نجح التحديث');
@@ -4441,24 +3549,30 @@
                         showToast('فشل في تحديث الحالة', 'error');
                     }
                 } else {
+                    // وضع الإنشاء الجديد
                     formData.id = generateUniqueId();
                     formData.createdAt = new Date().toISOString();
                     formData.updatedAt = new Date().toISOString();
                     formData.status = 'active';
                     
+                    // إضافة إلى قاعدة البيانات
                     casesData.push(formData);
                     
+                    // حفظ فوري في التخزين المحلي
                     if (saveToLocalStorage()) {
+                        // تحديث الإحصائيات والواجهة
                         updateStatistics();
                         updateDashboard();
                         
                         showToast('تم حفظ الحالة في التخزين المحلي بنجاح!', 'success', 'نجح الحفظ');
                         
+                        // إعادة تعيين النموذج
                         setTimeout(() => {
                             resetForm();
                             clearDraft();
                         }, 1000);
                     } else {
+                        // إزالة الحالة من الذاكرة إذا فشل الحفظ
                         casesData.pop();
                         showToast('فشل في حفظ البيانات محلياً', 'error');
                     }
@@ -4472,6 +3586,7 @@
             }
         }
 
+        // إظهار/إخفاء حالة التحميل
         function showLoadingState(show) {
             const saveBtn = document.querySelector('.btn-success');
             if (saveBtn) {
@@ -4503,12 +3618,14 @@
                     return false;
                 }
                 
+                // تحقق إضافي للنصوص
                 if (type === 'text' && data[field].length < 2) {
                     showValidationError(field, `${label} يجب أن يحتوي على حرفين على الأقل`);
                     return false;
                 }
             }
             
+            // تحقق من صحة الأرقام
             const numericFields = ['age', 'govSalary', 'orgSalary', 'incomeAmount', 'expenses'];
             for (let field of numericFields) {
                 if (data[field] && data[field] !== '' && (isNaN(data[field]) || parseFloat(data[field]) < 0)) {
@@ -4517,6 +3634,7 @@
                 }
             }
             
+            // تحقق من صحة أرقام الهواتف
             const phoneFields = ['phoneFirst', 'phoneSecond'];
             for (let field of phoneFields) {
                 if (data[field] && data[field] !== '' && data[field] !== '00000000000') {
@@ -4531,19 +3649,23 @@
         }
 
         function showValidationError(fieldId, message) {
+            // إظهار رسالة الخطأ
             showToast(message, 'error', 'بيانات غير صحيحة');
             
+            // التركيز على الحقل والتمييز بلون أحمر
             const fieldElement = document.getElementById(fieldId);
             if (fieldElement) {
                 fieldElement.focus();
                 fieldElement.style.borderColor = '#e74c3c';
                 fieldElement.style.boxShadow = '0 0 0 3px rgba(231, 76, 60, 0.1)';
                 
+                // إزالة التمييز بعد 3 ثوان
                 setTimeout(() => {
                     fieldElement.style.borderColor = '';
                     fieldElement.style.boxShadow = '';
                 }, 3000);
                 
+                // التمرير إلى الحقل
                 fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
@@ -4551,6 +3673,8 @@
         // ==============================
         // وظائف مساعدة للنماذج
         // ==============================
+
+        // الحصول على تسمية الحقل باللغة العربية
         function getFieldLabel(fieldName) {
             const labels = {
                 'fullName': 'الاسم الكامل',
@@ -4567,13 +3691,16 @@
             return labels[fieldName] || fieldName;
         }
 
+        // إنشاء معرف فريد محسن
         function generateUniqueId() {
             return 'case_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         }
 
+        // الحصول على بيانات النموذج المُحسن
         function getFormData() {
             const formData = {};
             
+            // الحصول على جميع عناصر الإدخال
             const inputs = document.querySelectorAll('#case-form input, #case-form select, #case-form textarea');
             
             inputs.forEach(input => {
@@ -4582,11 +3709,13 @@
                 }
             });
             
+            // إضافة بيانات أفراد العائلة الديناميكية
             formData.familyMembers = getFamilyMembersData();
             
             return formData;
         }
 
+        // الحصول على بيانات أفراد العائلة المُحسن
         function getFamilyMembersData() {
             const familyData = {
                 males: [],
@@ -4598,6 +3727,7 @@
             const femaleCount = parseInt(document.getElementById('femaleChildren')?.value) || 0;
             const marriedCount = parseInt(document.getElementById('married')?.value) || 0;
             
+            // جمع بيانات البنين
             for (let i = 1; i <= maleCount; i++) {
                 const ageElement = document.getElementById(`maleAge${i}`);
                 const jobElement = document.getElementById(`maleJob${i}`);
@@ -4609,6 +3739,7 @@
                 }
             }
             
+            // جمع بيانات البنات
             for (let i = 1; i <= femaleCount; i++) {
                 const ageElement = document.getElementById(`femaleAge${i}`);
                 const jobElement = document.getElementById(`femaleJob${i}`);
@@ -4620,6 +3751,7 @@
                 }
             }
             
+            // جمع بيانات المتزوجين
             for (let i = 1; i <= marriedCount; i++) {
                 const ageElement = document.getElementById(`marriedAge${i}`);
                 const jobElement = document.getElementById(`marriedJob${i}`);
@@ -4643,25 +3775,32 @@
                 const completedCases = casesData.filter(c => c.status === 'completed').length;
                 const activeCases = casesData.filter(c => c.status === 'active').length;
                 
+                // حساب المبلغ الإجمالي
                 const totalAmount = casesData.reduce((sum, c) => {
                     const amount = parseFloat(c.estimatedAssistance) || 0;
                     return sum + amount;
                 }, 0);
                 
+                // حساب حالات كل نوع
                 const sayedCases = casesData.filter(c => c.caseCode === 'سيد').length;
                 const expensesCases = casesData.filter(c => c.caseCode === 'مصاريف').length;
                 const generalCases = casesData.filter(c => c.caseCode === 'عام').length;
                 
+                // تحديث العناصر في الواجهة
                 updateElement('total-cases', totalCases);
                 updateElement('completed-cases', completedCases);
                 updateElement('active-cases', activeCases);
                 updateElement('total-amount', formatCurrency(totalAmount));
                 
+                // تحديث أرقام الشارات
                 updateElement('sayed-count', sayedCases);
                 updateElement('expenses-count', expensesCases);
                 updateElement('general-count', generalCases);
                 
+                // تحديث الإحصائيات المتقدمة
                 updateAdvancedStats();
+                
+                // تحديث الرسوم البيانية
                 updateChartsData();
                 
                 console.log(`📊 تم تحديث الإحصائيات: ${totalCases} حالة إجمالية`);
@@ -4671,6 +3810,7 @@
             }
         }
 
+        // تحديث الإحصائيات المتقدمة
         function updateAdvancedStats() {
             if (casesData.length === 0) {
                 updateElement('avg-amount', '0');
@@ -4680,11 +3820,13 @@
             }
             
             try {
+                // متوسط المبلغ
                 const totalAmount = casesData.reduce((sum, c) => {
                     return sum + (parseFloat(c.estimatedAssistance) || 0);
                 }, 0);
                 const avgAmount = Math.round(totalAmount / casesData.length);
                 
+                // حالات هذا الشهر
                 const currentMonth = new Date().getMonth();
                 const currentYear = new Date().getFullYear();
                 const monthCases = casesData.filter(c => {
@@ -4692,6 +3834,7 @@
                     return caseDate.getMonth() === currentMonth && caseDate.getFullYear() === currentYear;
                 }).length;
                 
+                // أكثر الأنواع طلباً
                 const typeCounts = {
                     'سيد': 0,
                     'مصاريف': 0,
@@ -4708,6 +3851,7 @@
                     typeCounts[a] > typeCounts[b] ? a : b
                 );
                 
+                // حساب معدل النمو (مقارنة مع الشهر الماضي)
                 const lastMonth = new Date();
                 lastMonth.setMonth(lastMonth.getMonth() - 1);
                 const lastMonthCases = casesData.filter(c => {
@@ -4720,6 +3864,7 @@
                     Math.round(((monthCases - lastMonthCases) / lastMonthCases) * 100) : 
                     (monthCases > 0 ? 100 : 0);
                 
+                // تحديث العناصر
                 updateElement('avg-amount', formatCurrency(avgAmount));
                 updateElement('month-cases', monthCases);
                 updateElement('top-category', topCategory);
@@ -4738,11 +3883,12 @@
             updateStatistics();
         }
 
+        // تحديث جدول الحالات الأخيرة
         function updateRecentCasesTable() {
             const tableBody = document.getElementById('recent-cases-table');
             if (!tableBody) return;
             
-            const recentCases = casesData.slice(-10).reverse();
+            const recentCases = casesData.slice(-10).reverse(); // آخر 10 حالات
             
             if (recentCases.length === 0) {
                 tableBody.innerHTML = `
@@ -4797,6 +3943,8 @@
         // ==============================
         // إدارة الحالات
         // ==============================
+
+        // تحميل الحالات حسب النوع
         function loadCasesByType(caseType) {
             const filteredCases = casesData.filter(c => c.caseCode === caseType);
             
@@ -4837,6 +3985,7 @@
                 return;
             }
             
+            // ترتيب الحالات حسب التاريخ (الأحدث أولاً)
             filteredCases.sort((a, b) => new Date(b.createdAt || b.caseDate) - new Date(a.createdAt || a.caseDate));
             
             tableBody.innerHTML = filteredCases.map(caseItem => {
@@ -4872,6 +4021,7 @@
             }).join('');
         }
 
+        // عرض تفاصيل الحالة
         function viewCaseDetails(caseId) {
             const caseData = casesData.find(c => c.id === caseId);
             if (!caseData) {
@@ -4879,6 +4029,7 @@
                 return;
             }
             
+            // تحويل بيانات العائلة للتوافق مع نظام الطباعة
             if (caseData.familyMembers) {
                 if (caseData.familyMembers.males) {
                     caseData.maleChildrenData = caseData.familyMembers.males;
@@ -4891,30 +4042,40 @@
                 }
             }
             
-            enhancedPrintPreviewWithAdvancedFeatures(caseData);
+            // عرض معاينة الطباعة مباشرة
+            enhancedPrintPreview(caseData);
         }
 
+        // طباعة حالة معينة
         function printCase(caseId) {
             viewCaseDetails(caseId);
         }
 
+        // تعديل حالة موجودة
         function editCase(caseId) {
             const caseData = casesData.find(c => c.id === caseId);
             if (!caseData) {
-                showToast('لم يتم العثور على الحالة', 'error');return;
+                showToast('لم يتم العثور على الحالة', 'error');
+                return;
             }
             
+            // تعبئة النموذج بالبيانات الموجودة
             fillFormWithData(caseData);
+            
+            // الانتقال لقسم التعديل
             showSection('create-case');
             
+            // تغيير النموذج لوضع التعديل
             const form = document.getElementById('case-form');
             form.setAttribute('data-edit-id', caseId);
             
+            // تغيير عنوان الصفحة
             document.querySelector('#create-case-section .content-header h2').textContent = 'تعديل الحالة';
             
             showToast('يمكنك الآن تعديل بيانات الحالة', 'info');
         }
 
+        // حذف حالة مع تأكيد محسن
         function deleteCase(caseId) {
             const caseData = casesData.find(c => c.id === caseId);
             if (!caseData) {
@@ -4922,6 +4083,7 @@
                 return;
             }
             
+            // تأكيد محسن مع تفاصيل الحالة
             const confirmMessage = `هل أنت متأكد من حذف هذه الحالة؟
 
 الاسم: ${caseData.fullName || 'غير محدد'}
@@ -4936,12 +4098,16 @@
             
             const index = casesData.findIndex(c => c.id === caseId);
             if (index !== -1) {
+                // إزالة الحالة
                 const deletedCase = casesData.splice(index, 1)[0];
                 
+                // حفظ التغييرات في التخزين المحلي
                 if (saveToLocalStorage()) {
+                    // تحديث الواجهة
                     updateStatistics();
                     updateDashboard();
                     
+                    // تحديث الجدول الحالي
                     if (currentSection.startsWith('cases-')) {
                         const caseType = currentSection.split('-')[1];
                         const typeMap = {
@@ -4954,19 +4120,23 @@
                     
                     showToast(`تم حذف حالة "${deletedCase.fullName}" بنجاح`, 'success');
                 } else {
+                    // إعادة الحالة إذا فشل الحفظ
                     casesData.splice(index, 0, deletedCase);
                     showToast('فشل في حذف الحالة من التخزين المحلي', 'error');
                 }
             }
         }
 
+        // تحديث حالة موجودة
         function updateExistingCase(caseId, newData) {
             const index = casesData.findIndex(c => c.id === caseId);
             if (index !== -1) {
+                // الاحتفاظ بالبيانات الأصلية المهمة
                 newData.id = caseId;
                 newData.createdAt = casesData[index].createdAt;
                 newData.updatedAt = new Date().toISOString();
                 
+                // استبدال البيانات
                 casesData[index] = newData;
                 
                 return true;
@@ -4974,7 +4144,9 @@
             return false;
         }
 
+        // تعبئة النموذج بالبيانات
         function fillFormWithData(data) {
+            // تعبئة الحقول الأساسية
             Object.keys(data).forEach(key => {
                 const element = document.getElementById(key);
                 if (element && typeof data[key] !== 'object') {
@@ -4982,10 +4154,12 @@
                 }
             });
             
+            // تعبئة بيانات العائلة إذا كانت متوفرة
             if (data.familyMembers) {
                 updateFamilyFields();
                 
                 setTimeout(() => {
+                    // تعبئة بيانات البنين
                     if (data.familyMembers.males) {
                         data.familyMembers.males.forEach((male, index) => {
                             const ageEl = document.getElementById(`maleAge${index + 1}`);
@@ -4995,6 +4169,7 @@
                         });
                     }
                     
+                    // تعبئة بيانات البنات
                     if (data.familyMembers.females) {
                         data.familyMembers.females.forEach((female, index) => {
                             const ageEl = document.getElementById(`femaleAge${index + 1}`);
@@ -5004,6 +4179,7 @@
                         });
                     }
                     
+                    // تعبئة بيانات المتزوجين
                     if (data.familyMembers.married) {
                         data.familyMembers.married.forEach((married, index) => {
                             const ageEl = document.getElementById(`marriedAge${index + 1}`);
@@ -5015,6 +4191,7 @@
                 }, 500);
             }
             
+            // تطبيق التحديثات
             calculateIncomeRemaining();
             toggleRentAmount();
         }
@@ -5044,6 +4221,7 @@
             updateSearchResults(filteredCases, searchTerm);
         }
 
+        // تحديث نتائج البحث
         function updateSearchResults(results, searchTerm) {
             const tableBody = document.getElementById('recent-cases-table');
             if (!tableBody) return;
@@ -5091,12 +4269,14 @@
                 `;
             }).join('');
             
+            // إضافة رسالة بعدد النتائج
             const headerElement = document.querySelector('#dashboard-section .content-header p');
             if (headerElement) {
                 headerElement.innerHTML = `تم العثور على ${results.length} نتيجة للبحث عن: <strong>"${searchTerm}"</strong> | <a href="#" onclick="document.getElementById('globalSearch').value=''; performSearch(); return false;">مسح البحث</a>`;
             }
         }
 
+        // إبراز النص في نتائج البحث
         function highlightText(text, searchTerm) {
             if (!searchTerm || !text) return text;
             
@@ -5104,6 +4284,7 @@
             return text.replace(regex, '<mark style="background: #ffeb3b; padding: 2px;">$1</mark>');
         }
 
+        // بحث متقدم
         function performAdvancedSearch() {
             const formNumber = document.getElementById('searchFormNumber').value.trim();
             const name = document.getElementById('searchName').value.trim();
@@ -5135,7 +4316,7 @@
                 if (toDate) {
                     const caseDate = new Date(c.createdAt || c.caseDate);
                     const searchToDate = new Date(toDate);
-                    searchToDate.setHours(23, 59, 59);
+                    searchToDate.setHours(23, 59, 59); // نهاية اليوم
                     if (caseDate > searchToDate) matches = false;
                 }
                 
@@ -5163,10 +4344,12 @@
             showModal('advancedSearchModal');
         }
 
+        // فتح ماسح QR
         function openQRScanner() {
             showModal('qrScannerModal');
         }
 
+        // بدء ماسح QR
         function startQRScanner() {
             showToast('ماسح QR قيد التطوير...', 'info', 'قريباً');
         }
@@ -5180,6 +4363,7 @@
                 modal.classList.add('show');
                 document.body.style.overflow = 'hidden';
                 
+                // إضافة مستمع للنقر خارج النافذة
                 modal.addEventListener('click', function(e) {
                     if (e.target === modal) {
                         closeModal(modalId);
@@ -5196,6 +4380,7 @@
             }
         }
 
+        // إغلاق جميع النوافذ المنبثقة
         function closeAllModals() {
             const modals = document.querySelectorAll('.modal.show');
             modals.forEach(modal => {
@@ -5213,6 +4398,8 @@
         // ==============================
         // وظائف النماذج المُحسنة
         // ==============================
+
+        // تحديث المنظم من الإعدادات
         function updateOrganizerFromSettings() {
             const organizerInput = document.getElementById('organizer');
             const currentUserElement = document.getElementById('current-user');
@@ -5226,6 +4413,7 @@
             }
         }
 
+        // تعيين تاريخ اليوم
         function setTodayDate() {
             const today = new Date();
             const formattedDate = today.toISOString().substr(0, 10);
@@ -5235,6 +4423,7 @@
             }
         }
 
+        // توليد رقم الاستمارة التلقائي المُحسن
         function generateFormNumber() {
             if (systemSettings.autoFormNumber === 'no') return;
             
@@ -5253,6 +4442,7 @@
             }
         }
 
+        // إظهار/إخفاء حقل مقدار الإيجار
         function toggleRentAmount() {
             const housingType = document.getElementById('housingType').value;
             const rentAmountGroup = document.getElementById('rentAmountGroup');
@@ -5273,6 +4463,7 @@
             }
         }
         
+        // تحديث الحقول الديناميكية للعائلة
         function updateFamilyFields() {
             const maleChildren = parseInt(document.getElementById('maleChildren').value) || 0;
             const femaleChildren = parseInt(document.getElementById('femaleChildren').value) || 0;
@@ -5283,19 +4474,20 @@
             const dynamicFieldsContainer = document.getElementById('familyDynamicFields');
             const fieldsContainer = document.getElementById('dynamicFieldsContainer');
             
+            // مسح الحقول الموجودة
             fieldsContainer.innerHTML = '';
             
             if (totalMembers > 0) {
                 dynamicFieldsContainer.style.display = 'block';
                 
-                if (maleChildren > 0) {
-                    createMemberFields('بنين', maleChildren, 'male');
-                }
+
                 
+                // إنشاء حقول البنات
                 if (femaleChildren > 0) {
                     createMemberFields('بنات', femaleChildren, 'female');
                 }
                 
+                // إنشاء حقول المتزوجين
                 if (married > 0) {
                     createMemberFields('متزوجين', married, 'married');
                 }
@@ -5304,6 +4496,7 @@
             }
         }
         
+        // إنشاء حقول لمجموعة من أفراد العائلة
         function createMemberFields(groupTitle, count, groupType) {
             const fieldsContainer = document.getElementById('dynamicFieldsContainer');
             
@@ -5330,12 +4523,14 @@
                 memberRow.style.gap = '12px';
                 memberRow.style.marginBottom = '12px';
                 
+                // حقل العمر
                 const ageGroup = document.createElement('div');
                 ageGroup.innerHTML = `
                     <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #2c3e50;">عمر ${groupTitle} ${i}</label>
                     <input type="number" id="${groupType}Age${i}" class="form-control" placeholder="العمر" min="0" max="120" style="padding: 10px 12px; font-size: 13px;">
                 `;
                 
+                // حقل المهنة
                 const jobGroup = document.createElement('div');
                 jobGroup.innerHTML = `
                     <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #2c3e50;">مهنة ${groupTitle} ${i}</label>
@@ -5350,6 +4545,7 @@
             fieldsContainer.appendChild(memberGroup);
         }
         
+        // حساب باقي الدخل
         function calculateIncomeRemaining() {
             const govSalary = parseInt(document.getElementById('govSalary').value) || 0;
             const orgSalary = parseInt(document.getElementById('orgSalary').value) || 0;
@@ -5363,6 +4559,7 @@
             if (remainingField) {
                 remainingField.value = remaining;
                 
+                // تلوين الحقل حسب النتيجة
                 if (remaining < 0) {
                     remainingField.style.color = '#e74c3c';
                     remainingField.style.fontWeight = 'bold';
@@ -5376,8 +4573,10 @@
             }
         }
         
+        // إعادة تعيين النموذج
         function resetForm() {
             try {
+                // تأكيد الإعادة تعيين إذا كان هناك بيانات
                 const formData = getFormData();
                 if (formData.fullName || formData.caseType) {
                     if (!confirm('هل أنت متأكد من إعادة تعيين النموذج؟ سيتم فقدان جميع البيانات المدخلة.')) {
@@ -5391,9 +4590,13 @@
                     form.removeAttribute('data-edit-id');
                 }
                 
+                // تعيين تاريخ اليوم
                 setTodayDate();
+                
+                // تعيين القيم الافتراضية من الإعدادات
                 updateOrganizerFromSettings();
                 
+                // إعادة تعيين القيم الافتراضية
                 const defaultValues = {
                     'amountNumeric': '150',
                     'phoneFirst': '00000000000',
@@ -5405,8 +4608,10 @@
                     if (element) element.value = value;
                 });
                 
+                // إعادة توليد رقم الاستمارة
                 generateFormNumber();
                 
+                // إخفاء حقل الإيجار والحقول الديناميكية
                 const rentAmountGroup = document.getElementById('rentAmountGroup');
                 if (rentAmountGroup) {
                     rentAmountGroup.style.display = 'none';
@@ -5417,11 +4622,13 @@
                     familyDynamicFields.style.display = 'none';
                 }
                 
+                // إعادة تعيين عنوان القسم
                 const sectionTitle = document.querySelector('#create-case-section .content-header h2');
                 if (sectionTitle) {
                     sectionTitle.textContent = 'إنشاء حالة جديدة';
                 }
                 
+                // حذف المسودة
                 clearDraft();
                 
                 showToast('تم إعادة تعيين النموذج بنجاح', 'info');
@@ -5432,6 +4639,7 @@
             }
         }
         
+        // تعبئة النموذج بمعلومات وهمية
         function fillFakeData() {
             const fake = {
                 caseCode: "سيد",
@@ -5485,6 +4693,7 @@
             toggleRentAmount();
             updateFamilyFields();
             
+            // تعبئة بيانات وهمية لأفراد العائلة
             setTimeout(() => {
                 const familyData = [
                     { type: 'male', data: [{age: "20", job: "طالب"}, {age: "18", job: "طالب"}] },
@@ -5505,7 +4714,9 @@
             showToast('تمت إضافة معلومات وهمية مع بيانات العائلة', 'info');
         }
 
+        // وضع علامة على النموذج كمُعدل
         function markFormDirty() {
+            // حذف المسودة القديمة وإنشاء جديدة
             const formData = getFormData();
             if (formData.fullName || formData.caseType) {
                 saveDraft(formData);
@@ -5513,11 +4724,12 @@
         }
 
         // ==============================
-        // نظام الطباعة المُحسن مع QR Code المتقدم
+        // نظام الطباعة المُحسن مع QR Code
         // ==============================
         
-        async function enhancedPrintPreviewWithAdvancedFeatures(caseData = null) {
-            showToast('جاري تحضير المعاينة المتقدمة...', 'info', 'معاينة الطباعة');
+        // إظهار معاينة الطباعة المُحسنة مع إصلاح QR Code
+        async function enhancedPrintPreview(caseData = null) {
+            showToast('جاري تحضير المعاينة...', 'info', 'معاينة الطباعة');
             
             const formData = caseData || getFormData();
             
@@ -5530,26 +4742,26 @@
 
                 document.getElementById('print-preview-container').style.display = 'flex';
                 document.body.style.overflow = 'hidden';
-                
-                // إضافة الأزرار المتقدمة
-                addAdvancedPrintButtons();
-                
             } catch (error) {
                 console.error('خطأ في معاينة الطباعة:', error);
                 showToast('حدث خطأ في معاينة الطباعة', 'error');
             }
         }
         
+        // إنشاء قالب الطباعة المُحسن مع QR Code صحيح
         async function createEnhancedPrintTemplate(data) {
             const container = document.createElement('div');
             container.className = 'print-container';
 
+            // تنسيق التاريخ
             const caseDate = data.caseDate ? new Date(data.caseDate) : new Date();
             const formattedDate = `${caseDate.getDate()} / ${caseDate.getMonth() + 1} / ${caseDate.getFullYear()} م`;
 
+            // إنشاء رأس الصفحة المُحسن
             const header = document.createElement('div');
             header.className = 'print-header';
             
+            // تطبيق اللون والحدود حسب نوع الحالة
             if (data.caseCode === 'سيد') {
                 header.classList.add('header-sayed');
             } else if (data.caseCode === 'عام') {
@@ -5558,6 +4770,7 @@
                 header.classList.add('header-expenses');
             }
 
+            // الجهة اليمنى للهيدر
             const headerRight = document.createElement('div');
             headerRight.className = 'header-right';
             headerRight.innerHTML = `
@@ -5565,6 +4778,7 @@
                 <div class="charity-name">الثقافية الخيرية</div>
             `;
 
+            // إنشاء QR Code المُصحح
             const headerQR = document.createElement('div');
             headerQR.className = 'header-qr';
             
@@ -5588,6 +4802,7 @@
                 headerQR.innerHTML = '<div style="font-size:10px; text-align:center;">QR<br>خطأ</div>';
             }
 
+            // الجهة الوسطى للهيدر
             const headerCenter = document.createElement('div');
             headerCenter.className = 'header-center';
             headerCenter.innerHTML = `
@@ -5596,17 +4811,19 @@
                 <div class="form-number">رقم المعاملة: ${data.formNumber || '001'}</div>
             `;
 
+            // الجهة اليسرى - معلومات الحالة
             const headerLeft = document.createElement('div');
             headerLeft.className = 'header-left';
 
             const headerTable = document.createElement('table');
             headerTable.className = 'header-table';
 
+            // بيانات الحالة
             const headerRows = [
                 { label: 'رمز الحالة:', value: data.caseCode || 'مصاريف' },
                 { label: 'نوع الحالة:', value: data.caseType || 'مهرجان استشهاد امير المؤمنين' },
                 { label: 'التاريخ:', value: formattedDate },
-                { label: 'المنظم:', value: data.organizer || systemSettings.defaultOrganizer || 'أبو كرار' }
+                { label: 'المنظم:', value: data.organizer || systemSettings.defaultOrganizer || 'أبو كरار' }
             ];
 
             headerRows.forEach(row => {
@@ -5619,6 +4836,7 @@
 
             headerLeft.appendChild(headerTable);
 
+            // إضافة الأقسام إلى الهيدر
             header.appendChild(headerRight);
             header.appendChild(headerQR);
             header.appendChild(headerCenter);
@@ -5626,6 +4844,7 @@
 
             container.appendChild(header);
 
+            // إنشاء محتوى الاستمارة المُحسن
             const content = document.createElement('div');
             content.className = 'print-content';
 
@@ -5634,6 +4853,7 @@
 
             container.appendChild(content);
 
+            // تذييل الصفحة
             const footer = document.createElement('div');
             footer.className = 'print-footer';
 
@@ -5660,6 +4880,7 @@
             return container;
         }
 
+        // إنشاء محتوى الطباعة المُحسن
         function generatePrintContentHTML(data) {
             return `
                 <!-- سطر 1: المعلومات الأساسية -->
@@ -5805,6 +5026,7 @@
             `;
         }
 
+        // إنشاء صفوف العائلة المُحسنة
         function generateFamilyRowsHTML(data) {
             const housingType = data.housingType || '';
             const rentAmount = data.rentAmount || '';
@@ -5863,6 +5085,7 @@
             
             familyHTML += '</div>';
             
+            // إضافة صفوف الأعمار والوظائف
             const familyDataHTML = generateFamilyDataRowsHTML(data);
             if (familyDataHTML) {
                 familyHTML += familyDataHTML;
@@ -5871,6 +5094,7 @@
             return familyHTML;
         }
 
+        // إنشاء صفوف بيانات العائلة المُحسنة
         function generateFamilyDataRowsHTML(data) {
             const hasFamilyData = 
                 (data.familyMembers && (
@@ -5931,9 +5155,11 @@
             return agesHTML + jobsHTML;
         }
 
+        // إنشاء الصفوف الإضافية
         function generateAdditionalRowsHTML(data) {
             let additionalHTML = '';
             
+            // معلومات الزوج/ة
             if (data.spouseName || data.spouseLastName || data.spouseJob || data.spouseSalary) {
                 additionalHTML += `
                     <div class="content-row">
@@ -5957,6 +5183,7 @@
                 `;
             }
             
+            // المعيل الآخر
             if (data.hasOtherSupport === 'نعم' || data.supporterName || data.supporterRelation) {
                 additionalHTML += `
                     <div class="content-row">
@@ -5976,6 +5203,7 @@
                 `;
             }
             
+            // الملاحظات
             if (data.notes) {
                 additionalHTML += `
                     <div class="content-row">
@@ -5990,6 +5218,7 @@
             return additionalHTML;
         }
 
+        // إنشاء نص QR Code من بيانات النموذج المُحسن
         function generateFormDataText(data) {
             const today = new Date();
             const formattedDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
@@ -6064,6 +5293,7 @@ ${data.estimatedAssistance || 'غير محدد'} دينار
             return qrText;
         }
 
+        // إنشاء QR Code باستخدام مكتبة qrcode.js المُصححة
         async function generateQRCode(text, size = 200) {
             try {
                 if (typeof QRCode === 'undefined') {
@@ -6089,6 +5319,7 @@ ${data.estimatedAssistance || 'غير محدد'} دينار
             }
         }
 
+        // تحويل الأرقام إلى إنجليزية
         function toEnglishDigits(str) {
             if (typeof str !== 'string') str = String(str);
             return str.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, function(c) {
@@ -6096,6 +5327,7 @@ ${data.estimatedAssistance || 'غير محدد'} دينار
             });
         }
 
+        // تنسيق الأرقام بالإنجليزية للطباعة
         function formatNumber(value) {
             if (value === undefined || value === null || value === '') {
                 return '';
@@ -6109,50 +5341,22 @@ ${data.estimatedAssistance || 'غير محدد'} دينار
             return toEnglishDigits(value);
         }
         
+        // إغلاق معاينة الطباعة
         function closePrintPreview() {
             document.getElementById('print-preview-container').style.display = 'none';
             document.body.style.overflow = 'auto';
         }
         
+        // الطباعة من المعاينة
         function printFromPreview() {
             window.print();
-        }
-
-        // إضافة الأزرار المتقدمة لمعاينة الطباعة
-        function addAdvancedPrintButtons() {
-            const printActions = document.getElementById('print-preview-actions');
-            if (printActions) {
-                // زر إدارة القوالب
-                const templateBtn = document.createElement('button');
-                templateBtn.className = 'btn btn-primary';
-                templateBtn.style.marginRight = '10px';
-                templateBtn.innerHTML = '<i class="fas fa-templates"></i> <span>القوالب</span>';
-                templateBtn.onclick = showTemplateManager;
-                
-                // زر إدارة الإصدارات
-                const versionBtn = document.createElement('button');
-                versionBtn.className = 'btn btn-secondary';
-                versionBtn.style.marginRight = '10px';
-                versionBtn.innerHTML = '<i class="fas fa-history"></i> <span>الإصدارات</span>';
-                versionBtn.onclick = showVersionManager;
-                
-                // زر الطباعة الذكية
-                const smartBtn = document.createElement('button');
-                smartBtn.className = 'btn btn-info';
-                smartBtn.style.marginRight = '10px';
-                smartBtn.innerHTML = '<i class="fas fa-magic"></i> <span>طباعة ذكية</span>';
-                smartBtn.onclick = () => smartPrintManager.smartPrint(getFormData());
-                
-                printActions.insertBefore(smartBtn, printActions.firstChild);
-                printActions.insertBefore(versionBtn, printActions.firstChild);
-                printActions.insertBefore(templateBtn, printActions.firstChild);
-            }
         }
 
         // ==============================
         // تهيئة الرسوم البيانية المُحسنة
         // ==============================
         function initializeCharts() {
+            // رسم بياني للإحصائيات العامة
             const ctx1 = document.getElementById('statisticsChart');
             if (ctx1) {
                 chartInstances.statistics = new Chart(ctx1, {
@@ -6196,6 +5400,7 @@ ${data.estimatedAssistance || 'غير محدد'} دينار
                 });
             }
             
+            // رسم بياني دائري
             const ctx2 = document.getElementById('pieChart');
             if (ctx2) {
                 chartInstances.pie = new Chart(ctx2, {
@@ -6234,6 +5439,7 @@ ${data.estimatedAssistance || 'غير محدد'} دينار
             }
         }
 
+        // تحديث الرسوم البيانية
         function updateReportsCharts() {
             updateChartsData();
         }
@@ -6247,11 +5453,13 @@ ${data.estimatedAssistance || 'غير محدد'} دينار
             const expensesCount = casesData.filter(c => c.caseCode === 'مصاريف').length;
             const generalCount = casesData.filter(c => c.caseCode === 'عام').length;
             
+            // تحديث الرسم البياني الشريطي
             if (chartInstances.statistics) {
                 chartInstances.statistics.data.datasets[0].data = [sayedCount, expensesCount, generalCount];
                 chartInstances.statistics.update();
             }
             
+            // تحديث الرسم البياني الدائري
             if (chartInstances.pie) {
                 chartInstances.pie.data.datasets[0].data = [sayedCount, expensesCount, generalCount];
                 chartInstances.pie.update();
@@ -6376,6 +5584,7 @@ ${systemSettings.orgName}
                 return;
             }
             
+            // تحضير البيانات للتصدير
             const exportData = casesData.map(caseItem => ({
                 'رقم الاستمارة': caseItem.formNumber,
                 'اسم الحالة': caseItem.fullName,
@@ -6389,6 +5598,7 @@ ${systemSettings.orgName}
                 'تاريخ الإنشاء': formatDate(caseItem.createdAt)
             }));
             
+            // إنشاء CSV
             const csvContent = convertToCSV(exportData);
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             
@@ -6406,6 +5616,7 @@ ${systemSettings.orgName}
                 return;
             }
 
+            // إنشاء تقرير PDF نصي
             const pdfContent = `
 تقرير شامل - ${systemSettings.orgName}
 ========================================
@@ -6480,23 +5691,27 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                     const importedData = JSON.parse(e.target.result);
                     
                     if (importedData.cases && Array.isArray(importedData.cases)) {
+                        // دمج البيانات المستوردة مع البيانات الموجودة
                         const newCases = importedData.cases.filter(importedCase => 
                             !casesData.some(existingCase => existingCase.formNumber === importedCase.formNumber)
                         );
                         
                         casesData.push(...newCases);
                         
+                        // استيراد الإعدادات إذا كانت متوفرة
                         if (importedData.settings) {
                             systemSettings = { ...systemSettings, ...importedData.settings };
                             loadSettingsToForm();
                         }
                         
+                        // حفظ في التخزين المحلي
                         if (saveToLocalStorage()) {
                             updateStatistics();
                             updateDashboard();
                             
                             showToast(`تم استيراد ${newCases.length} حالة جديدة بنجاح`, 'success');
                             
+                            // مسح اختيار الملف
                             fileInput.value = '';
                         } else {
                             showToast('فشل في حفظ البيانات المستوردة', 'error');
@@ -6522,7 +5737,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                 ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
             ].join('\n');
             
-            return '\uFEFF' + csvContent;
+            return '\uFEFF' + csvContent; // إضافة BOM للدعم العربي
         }
 
         // ==============================
@@ -6550,7 +5765,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
         }
 
         function createPartialBackup() {
-            const recentCases = casesData.slice(-50);
+            const recentCases = casesData.slice(-50); // آخر 50 حالة
             
             const backupData = {
                 cases: recentCases,
@@ -6598,6 +5813,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                             loadSettingsToForm();
                         }
                         
+                        // حفظ في التخزين المحلي
                         if (saveToLocalStorage()) {
                             updateStatistics();
                             updateDashboard();
@@ -6605,6 +5821,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                             
                             showToast(`تم استعادة ${casesData.length} حالة بنجاح`, 'success');
                             
+                            // مسح اختيار الملف
                             fileInput.value = '';
                         } else {
                             showToast('فشل في حفظ البيانات المستعادة', 'error');
@@ -6625,6 +5842,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             const frequency = document.getElementById('backupFrequency').value;
             const time = document.getElementById('backupTime').value;
             
+            // حفظ إعدادات النسخ الاحتياطي
             systemSettings.backupFrequency = frequency;
             systemSettings.backupTime = time;
             systemSettings.lastBackup = new Date().toISOString();
@@ -6700,71 +5918,6 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
         }
 
         // ==============================
-        // وظائف الطباعة المتقدمة
-        // ==============================
-        
-        // تهيئة مدير الطباعة
-        function initializePrintManager() {
-            showToast('تم تحميل مدير الطباعة المتقدم', 'info');
-        }
-
-        // تحميل إعدادات الطباعة الذكية
-        function loadSmartPrintSettings() {
-            try {
-                const saved = localStorage.getItem(STORAGE_KEYS.SMART_PRINT);
-                if (saved) {
-                    smartPrintSettings = { ...smartPrintSettings, ...JSON.parse(saved) };
-                }
-            } catch (error) {
-                console.error('خطأ في تحميل إعدادات الطباعة الذكية:', error);
-            }
-        }
-
-        // إظهار مدير القوالب
-        function showTemplateManager() {
-            showToast('مدير القوالب قيد التطوير...', 'info', 'قريباً');
-        }
-
-        // إظهار مدير الإصدارات
-        function showVersionManager() {
-            showToast('مدير الإصدارات قيد التطوير...', 'info', 'قريباً');
-        }
-
-        // إظهار لوحة الطباعة الذكية
-        function showSmartPrintPanel() {
-            showToast('لوحة الطباعة الذكية قيد التطوير...', 'info', 'قريباً');
-        }
-
-        // إظهار لوحة الطباعة المتعددة
-        function showBatchPrintPanel() {
-            showToast('لوحة الطباعة المتعددة قيد التطوير...', 'info', 'قريباً');
-        }
-
-        // تطبيق إعدادات الطباعة السريعة
-        function applyQuickPrintSettings() {
-            const template = document.getElementById('defaultTemplate').value;
-            const quality = document.getElementById('printQuality').value;
-            
-            templateManager.applyTemplate(template);
-            
-            showToast(`تم تطبيق القالب "${template}" بجودة ${quality}`, 'success');
-        }
-
-        // إعادة تعيين إعدادات الطباعة
-        function resetPrintSettings() {
-            document.getElementById('defaultTemplate').value = 'formal';
-            document.getElementById('printQuality').value = 'high';
-            
-            showToast('تم إعادة تعيين إعدادات الطباعة', 'info');
-        }
-
-        // إضافة أزرار سريعة للطباعة
-        function addQuickActionButtons() {
-            // تم إضافة الأزرار في النظام الأساسي
-            console.log('🔧 تم تهيئة أزرار الطباعة السريعة');
-        }
-
-        // ==============================
         // وظائف مساعدة محسنة
         // ==============================
         function updateElement(id, value) {
@@ -6807,6 +5960,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             };
         }
 
+        // إظهار إشعار محسن
         function showToast(message, type = 'info', title = '') {
             const container = document.getElementById('toast-container');
             if (!container) return;
@@ -6833,6 +5987,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             
             container.appendChild(toast);
             
+            // إزالة الإشعار بعد 4 ثوان
             setTimeout(() => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateX(100%)';
@@ -6844,6 +5999,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             }, 4000);
         }
 
+        // فلترة الحالات
         function filterCases(caseType) {
             loadCasesByType(caseType);
             showToast(`تم تطبيق فلتر ${caseType}`, 'info');
@@ -6859,12 +6015,14 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             const isMobile = window.innerWidth <= 768;
             
             if (isMobile) {
+                // إعدادات الهاتف المحمول
                 sidebar.classList.remove('collapsed');
                 if (!sidebar.classList.contains('show')) {
                     sidebar.style.right = '-280px';
                 }
                 mainContent.style.marginRight = '0';
                 
+                // إضافة طبقة تراكبية
                 if (!overlay) {
                     const newOverlay = document.createElement('div');
                     newOverlay.id = 'sidebarOverlay';
@@ -6882,6 +6040,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                     document.body.appendChild(newOverlay);
                 }
             } else {
+                // إعدادات الشاشات الكبيرة
                 sidebar.classList.remove('show');
                 sidebar.style.right = '0';
                 if (overlay) overlay.style.display = 'none';
@@ -6893,6 +6052,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                 }
             }
             
+            // تحديث الرسوم البيانية
             setTimeout(() => {
                 if (chartInstances.statistics) {
                     chartInstances.statistics.resize();
@@ -6902,7 +6062,8 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                 }
             }, 300);
         }
-   // مراقبة تغيير حجم الشاشة
+
+        // مراقبة تغيير حجم الشاشة
         window.addEventListener('resize', debounce(handleResize, 250));
 
         // إغلاق الشريط الجانبي عند النقر خارجه في الأجهزة المحمولة
@@ -7054,9 +6215,11 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             handleResize();
             console.log('✅ تم تحميل نظام إدارة الحالات الخيرية بنجاح مع التخزين المحلي الكامل');
         });
+        
+        
 
     </script>
-
+<script src="print-control.js"></script>
     <!-- طبقة تراكبية للشريط الجانبي (ستتم إضافتها ديناميكياً للهواتف) -->
     
 </body>
