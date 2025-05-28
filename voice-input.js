@@ -1,7 +1,7 @@
 /**
  * نظام الإدخال الصوتي المتكامل
- * ملف منفصل لإضافة ميزة التحكم الصوتي لجميع حقول الإدخال
- * يمكن دمجه مع أي نظام دون تعديل الملف الرئيسي
+ * ملف منفصل لإضافة إدخال البيانات بالصوت لجميع حقول النظام
+ * يستخدم Web Speech API مع دعم كامل للغة العربية
  * 
  * الاستخدام: قم بتضمين هذا الملف في HTML الخاص بك
  * <script src="voice-input.js"></script>
@@ -14,117 +14,105 @@ const DEFAULT_VOICE_SETTINGS = {
     // إعدادات التعرف على الصوت
     language: 'ar-SA', // اللغة الافتراضية (العربية السعودية)
     continuous: false, // التسجيل المستمر
-    interimResults: true, // إظهار النتائج المؤقتة
-    maxAlternatives: 1, // عدد البدائل المقترحة
+    interimResults: true, // النتائج المؤقتة
+    maxAlternatives: 3, // عدد البدائل
     
     // إعدادات الواجهة
-    showMicIcon: true, // إظهار أيقونة المايكروفون
-    autoInsert: true, // إدراج النص تلقائياً
-    confirmBeforeInsert: false, // تأكيد قبل الإدراج
+    showMicButton: true, // إظهار أزرار المايكروفون
+    buttonSize: 'normal', // حجم الأزرار (small, normal, large)
+    buttonPosition: 'right', // موقع الأزرار (left, right)
+    showPanel: true, // إظهار لوحة التحكم
     
     // إعدادات الصوت
-    enableBeep: true, // صوت التنبيه
-    voiceFeedback: false, // ردود فعل صوتية
+    volume: 0.8, // مستوى الصوت للتنبيهات
+    enableSounds: true, // تفعيل الأصوات
+    enableVibration: true, // تفعيل الاهتزاز (للهواتف)
     
-    // إعدادات المعالجة
-    autoCapitalize: true, // كتابة الحرف الأول بحروف كبيرة
-    autoCorrect: true, // التصحيح التلقائي
-    numberConversion: true, // تحويل الأرقام المنطوقة
+    // إعدادات التحويل
+    autoCapitalize: true, // كتابة أول حرف كبير تلقائياً
+    autoCorrect: true, // تصحيح تلقائي
+    enablePunctuation: true, // علامات الترقيم التلقائية
     
-    // إعدادات متقدمة
-    timeout: 10000, // مهلة زمنية للتسجيل (10 ثوان)
-    noiseReduction: true, // تقليل الضوضاء
-    echoCancellation: true, // إلغاء الصدى
-    
-    // قائمة الحقول المستثناة
-    excludeFields: ['password', 'confirmPassword'],
+    // إعدادات الأمان
+    confirmBeforeInput: false, // تأكيد قبل الإدخال
+    timeoutDuration: 10000, // مهلة التسجيل بالميلي ثانية
     
     // اللغات المدعومة
-    supportedLanguages: {
-        'ar-SA': 'العربية (السعودية)',
-        'ar-EG': 'العربية (مصر)',
-        'ar-AE': 'العربية (الإمارات)',
-        'ar-JO': 'العربية (الأردن)',
-        'ar-IQ': 'العربية (العراق)',
-        'en-US': 'English (US)',
-        'en-GB': 'English (UK)'
-    }
+    supportedLanguages: [
+        { code: 'ar-SA', name: 'العربية السعودية', flag: '🇸🇦' },
+        { code: 'ar-EG', name: 'العربية المصرية', flag: '🇪🇬' },
+        { code: 'ar-AE', name: 'العربية الإماراتية', flag: '🇦🇪' },
+        { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
+        { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' }
+    ]
 };
 
 // ==============================
-// متغيرات النظام الصوتي
+// متغيرات النظام
 // ==============================
 let currentVoiceSettings = { ...DEFAULT_VOICE_SETTINGS };
 let recognition = null;
 let isListening = false;
-let currentField = null;
+let currentTargetInput = null;
 let voiceControlPanel = null;
-let micButtons = [];
-let isInitialized = false;
+let micButtons = new Map();
 
-// قاموس تحويل الأرقام العربية المنطوقة
-const arabicNumbers = {
-    'صفر': '0', 'واحد': '1', 'اثنين': '2', 'اثنان': '2', 'ثلاثة': '3', 'أربعة': '4',
-    'خمسة': '5', 'ستة': '6', 'سبعة': '7', 'ثمانية': '8', 'تسعة': '9', 'عشرة': '10',
-    'عشر': '10', 'إحدى عشر': '11', 'اثنا عشر': '12', 'ثلاثة عشر': '13', 'أربعة عشر': '14',
-    'خمسة عشر': '15', 'ستة عشر': '16', 'سبعة عشر': '17', 'ثمانية عشر': '18', 'تسعة عشر': '19',
-    'عشرون': '20', 'ثلاثون': '30', 'أربعون': '40', 'خمسون': '50', 'ستون': '60',
-    'سبعون': '70', 'ثمانون': '80', 'تسعون': '90', 'مائة': '100', 'ألف': '1000'
-};
-
-// قاموس الكلمات الشائعة للتصحيح
-const commonCorrections = {
-    'الف': 'ألف',
-    'اله': 'الله',
-    'محمد': 'محمد',
-    'على': 'علي',
-    'حسن': 'حسن',
-    'حسين': 'حسين'
+// أصوات التنبيهات
+const VOICE_SOUNDS = {
+    start: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAIAE...', // بيانات صوتية مضغوطة
+    success: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAIAE...',
+    error: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAIAE...',
+    end: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAIAE...'
 };
 
 // ==============================
 // تهيئة النظام الصوتي
 // ==============================
 function initializeVoiceSystem() {
-    if (isInitialized) return;
-    
-    // تحقق من دعم المتصفح
-    if (!checkBrowserSupport()) {
-        console.warn('❌ المتصفح لا يدعم التعرف على الصوت');
-        return;
+    try {
+        // التحقق من دعم المتصفح
+        if (!checkBrowserSupport()) {
+            console.warn('❌ المتصفح لا يدعم التعرف على الصوت');
+            return;
+        }
+        
+        // تحميل الإعدادات المحفوظة
+        loadVoiceSettings();
+        
+        // تهيئة محرك التعرف على الصوت
+        initializeSpeechRecognition();
+        
+        // إضافة أزرار المايكروفون
+        addMicrophoneButtons();
+        
+        // إنشاء لوحة التحكم
+        createVoiceControlPanel();
+        
+        // إعداد المستمعين
+        setupVoiceEventListeners();
+        
+        console.log('🎤 تم تهيئة نظام الإدخال الصوتي بنجاح');
+        
+        // إشعار المستخدم
+        showVoiceToast('🎤 نظام الإدخال الصوتي جاهز للاستخدام', 'success');
+        
+    } catch (error) {
+        console.error('❌ خطأ في تهيئة النظام الصوتي:', error);
+        showVoiceToast('فشل في تهيئة النظام الصوتي', 'error');
     }
-    
-    // تحميل الإعدادات المحفوظة
-    loadVoiceSettings();
-    
-    // تهيئة خدمة التعرف على الصوت
-    initializeSpeechRecognition();
-    
-    // إضافة أيقونات المايكروفون لجميع الحقول
-    addMicrophoneIcons();
-    
-    // إنشاء لوحة التحكم الصوتي
-    createVoiceControlPanel();
-    
-    // مراقبة الحقول الجديدة
-    observeNewFields();
-    
-    // إعداد اختصارات لوحة المفاتيح
-    setupVoiceKeyboardShortcuts();
-    
-    isInitialized = true;
-    console.log('🎤 تم تهيئة نظام الإدخال الصوتي بنجاح');
 }
 
 // ==============================
-// فحص دعم المتصفح
+// التحقق من دعم المتصفح
 // ==============================
 function checkBrowserSupport() {
+    // التحقق من Web Speech API
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         showVoiceToast('المتصفح لا يدعم التعرف على الصوت', 'error');
         return false;
     }
     
+    // التحقق من إمكانية الوصول للمايكروفون
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         showVoiceToast('المتصفح لا يدعم الوصول للمايكروفون', 'error');
         return false;
@@ -134,753 +122,835 @@ function checkBrowserSupport() {
 }
 
 // ==============================
-// تهيئة خدمة التعرف على الصوت
+// تهيئة محرك التعرف على الصوت
 // ==============================
 function initializeSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+        throw new Error('Speech Recognition API غير مدعوم');
+    }
+    
     recognition = new SpeechRecognition();
     
-    // إعداد خصائص التعرف على الصوت
-    recognition.language = currentVoiceSettings.language;
+    // إعداد المحرك
+    recognition.lang = currentVoiceSettings.language;
     recognition.continuous = currentVoiceSettings.continuous;
     recognition.interimResults = currentVoiceSettings.interimResults;
     recognition.maxAlternatives = currentVoiceSettings.maxAlternatives;
     
     // أحداث التعرف على الصوت
-    recognition.onstart = handleRecognitionStart;
-    recognition.onresult = handleRecognitionResult;
-    recognition.onerror = handleRecognitionError;
-    recognition.onend = handleRecognitionEnd;
-    recognition.onnomatch = handleNoMatch;
-    recognition.onsoundstart = handleSoundStart;
-    recognition.onsoundend = handleSoundEnd;
+    recognition.onstart = function() {
+        isListening = true;
+        updateMicButtonState(currentTargetInput, 'listening');
+        playVoiceSound('start');
+        showVoiceToast('🎤 جاري الاستماع...', 'info');
+        
+        if (currentVoiceSettings.enableVibration && navigator.vibrate) {
+            navigator.vibrate(100);
+        }
+    };
+    
+    recognition.onresult = function(event) {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            
+            if (event.results[i].isFinal) {
+                finalTranscript += transcript;
+            } else {
+                interimTranscript += transcript;
+            }
+        }
+        
+        // إظهار النتائج المؤقتة
+        if (interimTranscript && currentTargetInput) {
+            showInterimResult(interimTranscript);
+        }
+        
+        // معالجة النتائج النهائية
+        if (finalTranscript && currentTargetInput) {
+            processVoiceInput(finalTranscript);
+        }
+    };
+    
+    recognition.onerror = function(event) {
+        isListening = false;
+        updateMicButtonState(currentTargetInput, 'idle');
+        
+        let errorMessage = 'حدث خطأ في التعرف على الصوت';
+        
+        switch(event.error) {
+            case 'no-speech':
+                errorMessage = 'لم يتم سماع أي صوت';
+                break;
+            case 'audio-capture':
+                errorMessage = 'لا يمكن الوصول للمايكروفون';
+                break;
+            case 'not-allowed':
+                errorMessage = 'تم رفض الإذن للوصول للمايكروفون';
+                break;
+            case 'network':
+                errorMessage = 'خطأ في الشبكة';
+                break;
+            case 'language-not-supported':
+                errorMessage = 'اللغة المحددة غير مدعومة';
+                break;
+        }
+        
+        showVoiceToast(errorMessage, 'error');
+        playVoiceSound('error');
+    };
+    
+    recognition.onend = function() {
+        isListening = false;
+        updateMicButtonState(currentTargetInput, 'idle');
+        hideInterimResult();
+        playVoiceSound('end');
+    };
 }
 
 // ==============================
-// إضافة أيقونات المايكروفون
+// إضافة أزرار المايكروفون
 // ==============================
-function addMicrophoneIcons() {
+function addMicrophoneButtons() {
+    // البحث عن جميع حقول الإدخال
     const inputFields = document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"], textarea, select');
     
-    inputFields.forEach(field => {
-        if (shouldExcludeField(field)) return;
-        
-        // تحقق من وجود أيقونة المايكروفون مسبقاً
-        if (field.closest('.voice-input-wrapper')) return;
-        
-        addMicrophoneToField(field);
-    });
+    inputFields.forEach(addMicButtonToField);
+    
+    // مراقبة إضافة حقول جديدة
+    observeNewInputFields();
 }
 
-// ==============================
-// إضافة مايكروفون لحقل واحد
-// ==============================
-function addMicrophoneToField(field) {
-    // إنشاء wrapper للحقل
-    const wrapper = document.createElement('div');
-    wrapper.className = 'voice-input-wrapper';
-    wrapper.style.cssText = `
-        position: relative;
-        display: inline-block;
-        width: 100%;
-    `;
-    
-    // إنشاء أيقونة المايكروفون
-    const micButton = document.createElement('button');
-    micButton.type = 'button';
-    micButton.className = 'voice-mic-btn';
-    micButton.innerHTML = '🎤';
-    micButton.setAttribute('aria-label', 'إدخال صوتي');
-    micButton.setAttribute('title', 'اضغط للإدخال الصوتي (Ctrl+Shift+V)');
-    
-    // تنسيق أيقونة المايكروفون
-    micButton.style.cssText = `
-        position: absolute;
-        right: 8px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
-        border: none;
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        cursor: pointer;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
-    `;
-    
-    // إضافة تأثيرات hover
-    micButton.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-50%) scale(1.1)';
-        this.style.boxShadow = '0 4px 12px rgba(231, 76, 60, 0.4)';
-    });
-    
-    micButton.addEventListener('mouseleave', function() {
-        if (!this.classList.contains('listening')) {
-            this.style.transform = 'translateY(-50%) scale(1)';
-            this.style.boxShadow = '0 2px 8px rgba(231, 76, 60, 0.3)';
-        }
-    });
-    
-    // إضافة معالج النقر
-    micButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        startVoiceInput(field, micButton);
-    });
-    
-    // تعديل padding الحقل لتوفير مساحة للأيقونة  
-    const originalPadding = window.getComputedStyle(field).paddingRight;
-    field.style.paddingRight = '45px';
-    
-    // وضع الحقل داخل wrapper
-    field.parentNode.insertBefore(wrapper, field);
-    wrapper.appendChild(field);
-    wrapper.appendChild(micButton);
-    
-    // حفظ مرجع الزر
-    micButtons.push({
-        button: micButton,
-        field: field,
-        wrapper: wrapper
-    });
-}
-
-// ==============================
-// فحص الحقول المستثناة
-// ==============================
-function shouldExcludeField(field) {
-    // فحص نوع الحقل
-    if (field.type === 'password' || field.type === 'hidden') return true;
-    
-    // فحص ID الحقل
-    if (currentVoiceSettings.excludeFields.includes(field.id)) return true;
-    
-    // فحص الصفات الخاصة
-    if (field.hasAttribute('data-no-voice')) return true;
-    
-    // فحص readonly أو disabled
-    if (field.readOnly || field.disabled) return true;
-    
-    return false;
-}
-
-// ==============================
-// بدء الإدخال الصوتي
-// ==============================
-function startVoiceInput(field, micButton) {
-    if (isListening) {
-        stopVoiceInput();
+function addMicButtonToField(inputField) {
+    // تجاهل الحقول المخفية أو الغير قابلة للتعديل  
+    if (inputField.type === 'hidden' || inputField.readOnly || inputField.disabled) {
         return;
     }
     
-    // طلب إذن الوصول للمايكروفون
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(() => {
-            currentField = field;
-            isListening = true;
-            
-            // تحديث مظهر الزر
-            updateMicButtonState(micButton, 'listening');
-            
-            // بدء التعرف على الصوت
-            try {
-                recognition.start();
-                
-                // صوت البداية
-                if (currentVoiceSettings.enableBeep) {
-                    playBeep('start');
-                }
-                
-                // إظهار مؤشر الاستماع
-                showListeningIndicator(field);
-                
-                // مؤقت للإيقاف التلقائي
-                setTimeout(() => {
-                    if (isListening) {
-                        stopVoiceInput();
-                    }
-                }, currentVoiceSettings.timeout);
-                
-            } catch (error) {
-                console.error('خطأ في بدء التعرف على الصوت:', error);
-                showVoiceToast('خطأ في بدء التسجيل الصوتي', 'error');
-                resetVoiceInput();
-            }
-        })
-        .catch(error => {
-            console.error('خطأ في الوصول للمايكروفون:', error);
-            showVoiceToast('يرجى السماح بالوصول للمايكروفون', 'warning');
-        });
+    // تجاهل الحقول التي تحتوي على مايكروفون بالفعل
+    if (micButtons.has(inputField)) {
+        return;
+    }
+    
+    // إنشاء زر المايكروفون
+    const micButton = createMicButton(inputField);
+    
+    // إضافة الزر للحقل
+    insertMicButton(inputField, micButton);
+    
+    // حفظ المرجع
+    micButtons.set(inputField, micButton);
+}
+
+function createMicButton(inputField) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'voice-mic-button';
+    button.title = 'إدخال بالصوت';
+    button.setAttribute('data-target', inputField.id || generateFieldId(inputField));
+    
+    // تحديد حجم الزر
+    const sizeClass = `mic-${currentVoiceSettings.buttonSize}`;
+    button.classList.add(sizeClass);
+    
+    // أيقونة المايكروفون
+    button.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2ZM19 11C19 15.42 15.42 19 11 19V21H13V23H11C10.45 23 10 22.55 10 22S10.45 21 11 21V19C6.58 19 3 15.42 3 11H5C5 13.76 7.24 16 10 16H14C16.76 16 19 13.76 19 11H19ZM17 11C17 13.21 15.21 15 13 15H11C8.79 15 7 13.21 7 11V5C7 2.79 8.79 1 11 1H13C15.21 1 17 2.79 17 5V11Z"/>
+        </svg>
+        <span class="mic-status"></span>
+    `;
+    
+    // أحداث الزر
+    button.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleMicButtonClick(inputField, button);
+    });
+    
+    return button;
+}
+
+function insertMicButton(inputField, micButton) {
+    const container = inputField.parentNode;
+    
+    // إنشاء حاوية للحقل والزر إذا لم تكن موجودة
+    if (!container.classList.contains('voice-input-container')) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'voice-input-container';
+        
+        // نسخ الحقل إلى الحاوية الجديدة
+        container.insertBefore(wrapper, inputField);
+        wrapper.appendChild(inputField);
+        wrapper.appendChild(micButton);
+    } else {
+        container.appendChild(micButton);
+    }
+}
+
+function generateFieldId(field) {
+    return 'voice_field_' + Math.random().toString(36).substr(2, 9);
 }
 
 // ==============================
-// إيقاف الإدخال الصوتي
+// معالجة النقر على زر المايكروفون
 // ==============================
-function stopVoiceInput() {
+function handleMicButtonClick(inputField, micButton) {
+    if (isListening) {
+        stopListening();
+        return;
+    }
+    
+    // التحقق من الأذونات
+    requestMicrophonePermission()
+        .then(() => {
+            startListening(inputField, micButton);
+        })
+        .catch((error) => {
+            console.error('خطأ في أذونات المايكروفون:', error);
+            showVoiceToast('يرجى السماح بالوصول للمايكروفون', 'error');
+        });
+}
+
+function requestMicrophonePermission() {
+    return navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            // إيقاف التدفق بعد التحقق من الأذونات
+            stream.getTracks().forEach(track => track.stop());
+            return true;
+        });
+}
+
+function startListening(inputField, micButton) {
+    try {
+        currentTargetInput = inputField;
+        
+        // تحديث إعدادات المحرك
+        recognition.lang = currentVoiceSettings.language;
+        
+        // بدء التسجيل
+        recognition.start();
+        
+        // تعيين مهلة زمنية
+        setTimeout(() => {
+            if (isListening) {
+                stopListening();
+                showVoiceToast('انتهت مهلة التسجيل', 'warning');
+            }
+        }, currentVoiceSettings.timeoutDuration);
+        
+    } catch (error) {
+        console.error('خطأ في بدء التسجيل:', error);
+        showVoiceToast('فشل في بدء التسجيل', 'error');
+        updateMicButtonState(inputField, 'idle');
+    }
+}
+
+function stopListening() {
     if (recognition && isListening) {
         recognition.stop();
     }
 }
 
 // ==============================
-// إعادة تعيين حالة الإدخال الصوتي
+// معالجة الإدخال الصوتي
 // ==============================
-function resetVoiceInput() {
-    isListening = false;
-    currentField = null;
-    
-    // إعادة تعيين جميع أزرار المايكروفون
-    micButtons.forEach(({ button }) => {
-        updateMicButtonState(button, 'idle');
-    });
-    
-    // إخفاء مؤشر الاستماع
-    hideListeningIndicator();
-}
-
-// ==============================
-// تحديث حالة زر المايكروفون
-// ==============================
-function updateMicButtonState(button, state) {
-    button.classList.remove('listening', 'processing', 'error');
-    
-    switch (state) {
-        case 'listening':
-            button.classList.add('listening');
-            button.innerHTML = '🔴';
-            button.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
-            button.style.animation = 'pulse 1s infinite';
-            button.style.transform = 'translateY(-50%) scale(1.1)';
-            break;
-            
-        case 'processing':
-            button.classList.add('processing');
-            button.innerHTML = '⏳';
-            button.style.background = 'linear-gradient(135deg, #f39c12, #e67e22)';
-            button.style.animation = 'spin 1s linear infinite';
-            break;
-            
-        case 'error':
-            button.classList.add('error');
-            button.innerHTML = '❌';
-            button.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
-            button.style.animation = 'shake 0.5s ease-in-out';
-            setTimeout(() => updateMicButtonState(button, 'idle'), 2000);
-            break;
-            
-        case 'success':
-            button.innerHTML = '✅';
-            button.style.background = 'linear-gradient(135deg, #27ae60, #229954)';
-            button.style.animation = 'bounce 0.5s ease-in-out';
-            setTimeout(() => updateMicButtonState(button, 'idle'), 1500);
-            break;
-            
-        default: // idle
-            button.innerHTML = '🎤';
-            button.style.background = 'linear-gradient(135deg, #3498db, #2980b9)';
-            button.style.animation = 'none';
-            button.style.transform = 'translateY(-50%) scale(1)';
-            break;
-    }
-}
-
-// ==============================
-// إظهار مؤشر الاستماع
-// ==============================
-function showListeningIndicator(field) {
-    // إنشاء مؤشر الاستماع
-    const indicator = document.createElement('div');
-    indicator.id = 'voice-listening-indicator';
-    indicator.innerHTML = `
-        <div class="listening-animation">
-            <div class="wave"></div>
-            <div class="wave"></div>
-            <div class="wave"></div>
-        </div>
-        <div class="listening-text">🎤 جاري الاستماع...</div>
-        <button class="stop-listening-btn" onclick="stopVoiceInput()">إيقاف</button>
-    `;
-    
-    indicator.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(52, 152, 219, 0.95);
-        color: white;
-        padding: 15px 25px;
-        border-radius: 25px;
-        font-size: 14px;
-        font-weight: 500;
-        z-index: 10001;
-        box-shadow: 0 8px 25px rgba(52, 152, 219, 0.3);
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        backdrop-filter: blur(10px);
-        animation: slideInFromTop 0.3s ease;
-    `;
-    
-    document.body.appendChild(indicator);
-    
-    // إضافة الأنماط للأمواج المتحركة
-    if (!document.getElementById('voice-animations-style')) {
-        const style = document.createElement('style');
-        style.id = 'voice-animations-style';
-        style.textContent = `
-            @keyframes slideInFromTop {
-                from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
-                to { transform: translateX(-50%) translateY(0); opacity: 1; }
-            }
-            
-            @keyframes pulse {
-                0%, 100% { transform: translateY(-50%) scale(1); }
-                50% { transform: translateY(-50%) scale(1.1); }
-            }
-            
-            @keyframes spin {
-                from { transform: translateY(-50%) rotate(0deg); }
-                to { transform: translateY(-50%) rotate(360deg); }
-            }
-            
-            @keyframes shake {
-                0%, 100% { transform: translateY(-50%) translateX(0); }
-                25% { transform: translateY(-50%) translateX(-5px); }
-                75% { transform: translateY(-50%) translateX(5px); }
-            }
-            
-            @keyframes bounce {
-                0%, 100% { transform: translateY(-50%) scale(1); }
-                50% { transform: translateY(-50%) scale(1.2); }
-            }
-            
-            .listening-animation {
-                display: flex;
-                gap: 3px;
-                align-items: end;
-            }
-            
-            .wave {
-                width: 3px;
-                height: 15px;
-                background: white;
-                border-radius: 2px;
-                animation: waveAnimation 1s ease-in-out infinite;
-            }
-            
-            .wave:nth-child(2) { animation-delay: 0.1s; }
-            .wave:nth-child(3) { animation-delay: 0.2s; }
-            
-            @keyframes waveAnimation {
-                0%, 100% { height: 15px; opacity: 0.7; }
-                50% { height: 25px; opacity: 1; }
-            }
-            
-            .stop-listening-btn {
-                background: rgba(255, 255, 255, 0.2);
-                border: none;
-                color: white;
-                padding: 5px 15px;
-                border-radius: 15px;
-                cursor: pointer;
-                font-size: 12px;
-                transition: background 0.3s;
-            }
-            
-            .stop-listening-btn:hover {
-                background: rgba(255, 255, 255, 0.3);
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-// ==============================
-// إخفاء مؤشر الاستماع
-// ==============================
-function hideListeningIndicator() {
-    const indicator = document.getElementById('voice-listening-indicator');
-    if (indicator) {
-        indicator.style.animation = 'slideInFromTop 0.3s ease reverse';
-        setTimeout(() => {
-            if (document.body.contains(indicator)) {
-                document.body.removeChild(indicator);
-            }
-        }, 300);
-    }
-}
-
-// ==============================
-// معالجات أحداث التعرف على الصوت
-// ==============================
-function handleRecognitionStart() {
-    console.log('🎤 بدء التعرف على الصوت');
-    if (currentVoiceSettings.voiceFeedback) {
-        speak('بدء التسجيل');
-    }
-}
-
-function handleRecognitionResult(event) {
-    let transcript = '';
-    let isFinal = false;
-    
-    // جمع النتائج
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        transcript += result[0].transcript;
-        
-        if (result.isFinal) {
-            isFinal = true;
-        }
+function processVoiceInput(transcript) {
+    if (!currentTargetInput || !transcript.trim()) {
+        return;
     }
     
-    // معالجة النص
-    const processedText = processVoiceText(transcript);
+    let processedText = transcript.trim();
     
-    if (isFinal) {
-        // إدراج النص النهائي
-        insertTextToField(processedText);
-        
-        // إيقاف التسجيل
-        setTimeout(() => {
-            stopVoiceInput();
-        }, 500);
-    } else if (currentVoiceSettings.interimResults) {
-        // إظهار النتائج المؤقتة
-        showInterimResult(processedText);
-    }
-}
-
-function handleRecognitionError(event) {
-    console.error('خطأ في التعرف على الصوت:', event.error);
-    
-    let errorMessage = 'حدث خطأ في التعرف على الصوت';
-    
-    switch (event.error) {
-        case 'no-speech':
-            errorMessage = 'لم يتم اكتشاف صوت';
-            break;
-        case 'audio-capture':
-            errorMessage = 'لا يمكن الوصول للمايكروفون';
-            break;
-        case 'not-allowed':
-            errorMessage = 'يرجى السماح بالوصول للمايكروفون';
-            break;
-        case 'network':
-            errorMessage = 'خطأ في الاتصال بالإنترنت';
-            break;
-        case 'service-not-allowed':
-            errorMessage = 'خدمة التعرف على الصوت غير متاحة';
-            break;
-    }
-    
-    showVoiceToast(errorMessage, 'error');
-    
-    // تحديث حالة الزر
-    const currentMicButton = micButtons.find(({ field }) => field === currentField)?.button;
-    if (currentMicButton) {
-        updateMicButtonState(currentMicButton, 'error');
-    }
-    
-    resetVoiceInput();
-}
-
-function handleRecognitionEnd() {
-    console.log('🛑 انتهاء التعرف على الصوت');
-    
-    if (currentVoiceSettings.enableBeep) {
-        playBeep('end');
-    }
-    
-    resetVoiceInput();
-}
-
-function handleNoMatch() {
-    showVoiceToast('لم يتم التعرف على الصوت بوضوح', 'warning');
-}
-
-function handleSoundStart() {
-    console.log('🔊 بدء اكتشاف الصوت');
-}
-
-function handleSoundEnd() {
-    console.log('🔇 انتهاء اكتشاف الصوت');
-}
-
-// ==============================
-// معالجة النص الصوتي
-// ==============================
-function processVoiceText(text) {
-    let processedText = text.trim();
-    
-    // تحويل الأرقام المنطوقة
-    if (currentVoiceSettings.numberConversion) {
-        processedText = convertSpokenNumbers(processedText);
-    }
-    
-    // التصحيح التلقائي
-    if (currentVoiceSettings.autoCorrect) {
-        processedText = applyAutoCorrection(processedText);
-    }
-    
-    // كتابة الحرف الأول بحروف كبيرة
+    // تطبيق المعالجات
     if (currentVoiceSettings.autoCapitalize) {
         processedText = capitalizeFirst(processedText);
     }
     
-    return processedText;
+    if (currentVoiceSettings.autoCorrect) {
+        processedText = applyAutoCorrect(processedText);
+    }
+    
+    if (currentVoiceSettings.enablePunctuation) {
+        processedText = addPunctuation(processedText);
+    }
+    
+    // معالجة خاصة حسب نوع الحقل
+    processedText = processFieldSpecificInput(currentTargetInput, processedText);
+    
+    // إدراج النص
+    if (currentVoiceSettings.confirmBeforeInput) {
+        showConfirmationDialog(processedText)
+            .then(confirmed => {
+                if (confirmed) {
+                    insertTextToField(currentTargetInput, processedText);
+                }
+            });
+    } else {
+        insertTextToField(currentTargetInput, processedText);
+    }
+}
+
+function insertTextToField(field, text) {
+    // إدراج النص في الحقل
+    if (field.tagName.toLowerCase() === 'select') {
+        // للقوائم المنسدلة، البحث عن الخيار المناسب
+        selectBestOption(field, text);
+    } else {
+        // للحقول النصية
+        field.value = text;
+        field.focus();
+        
+        // إطلاق أحداث التغيير
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    
+    playVoiceSound('success');
+    showVoiceToast(`تم إدخال: "${text}"`, 'success');
+    
+    if (currentVoiceSettings.enableVibration && navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+    }
 }
 
 // ==============================
-// تحويل الأرقام المنطوقة
+// معالجات النصوص
 // ==============================
-function convertSpokenNumbers(text) {
-    let convertedText = text;
-    
-    // تحويل الأرقام العربية المنطوقة
-    Object.keys(arabicNumbers).forEach(spoken => {
-        const regex = new RegExp(`\\b${spoken}\\b`, 'gi');
-        convertedText = convertedText.replace(regex, arabicNumbers[spoken]);
-    });
-    
-    // تحويل الأرقام الإنجليزية المنطوقة
-    const englishNumbers = {
-        'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
-        'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
-        'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13',
-        'fourteen': '14', 'fifteen': '15', 'sixteen': '16', 'seventeen': '17',
-        'eighteen': '18', 'nineteen': '19', 'twenty': '20', 'thirty': '30',
-        'forty': '40', 'fifty': '50', 'sixty': '60', 'seventy': '70',
-        'eighty': '80', 'ninety': '90', 'hundred': '100', 'thousand': '1000'
+function capitalizeFirst(text) {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function applyAutoCorrect(text) {
+    // قاموس التصحيحات الشائعة
+    const corrections = {
+        'واحد': '1',
+        'اثنان': '2',
+        'ثلاثة': '3',
+        'أربعة': '4',
+        'خمسة': '5',
+        'ستة': '6',
+        'سبعة': '7',
+        'ثمانية': '8',
+        'تسعة': '9',
+        'عشرة': '10',
+        'صفر': '0',
+        'نعم': 'نعم',
+        'لا': 'لا',
+        'ذكر': 'ذكر',
+        'أنثى': 'أنثى',
+        'متزوج': 'متزوج/ة',
+        'عازب': 'أعزب/عزباء',
+        'أرمل': 'أرمل/ة',
+        'مطلق': 'مطلق/ة'
     };
     
-    Object.keys(englishNumbers).forEach(spoken => {
-        const regex = new RegExp(`\\b${spoken}\\b`, 'gi');
-        convertedText = convertedText.replace(regex, englishNumbers[spoken]);
-    });
-    
-    return convertedText;
-}
-
-// ==============================
-// تطبيق التصحيح التلقائي
-// ==============================
-function applyAutoCorrection(text) {
     let correctedText = text;
     
-    Object.keys(commonCorrections).forEach(wrong => {
-        const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
-        correctedText = correctedText.replace(regex, commonCorrections[wrong]);
+    Object.keys(corrections).forEach(word => {
+        const regex = new RegExp('\\b' + word + '\\b', 'gi');
+        correctedText = correctedText.replace(regex, corrections[word]);
     });
     
     return correctedText;
 }
 
-// ==============================
-// كتابة الحرف الأول بحروف كبيرة
-// ==============================
-function capitalizeFirst(text) {
-    if (!text) return text;
-    return text.charAt(0).toUpperCase() + text.slice(1);
+function addPunctuation(text) {
+    // إضافة علامات الترقيم التلقائية
+    let punctuatedText = text;
+    
+    // استبدال الكلمات بعلامات الترقيم
+    const punctuationMap = {
+        'نقطة': '.',
+        'فاصلة': ',',
+        'علامة استفهام': '؟',
+        'علامة تعجب': '!',
+        'نقطتان': ':',
+        'فاصلة منقوطة': ';',
+        'قوس مفتوح': '(',
+        'قوس مقفل': ')',
+        'خط': '-',
+        'شرطة': '_'
+    };
+    
+    Object.keys(punctuationMap).forEach(word => {
+        const regex = new RegExp('\\b' + word + '\\b', 'gi');
+        punctuatedText = punctuatedText.replace(regex, punctuationMap[word]);
+    });
+    
+    return punctuatedText;
+}
+
+function processFieldSpecificInput(field, text) {
+    const fieldType = field.type ? field.type.toLowerCase() : 'text';
+    const fieldId = field.id ? field.id.toLowerCase() : '';
+    
+    // معالجة خاصة بالأرقام
+    if (fieldType === 'number' || fieldType === 'tel') {
+        return extractNumbers(text);
+    }
+    
+    // معالجة خاصة بالتواريخ
+    if (fieldType === 'date' || fieldId.includes('date') || fieldId.includes('تاريخ')) {
+        return convertDateFromSpeech(text);
+    }
+    
+    // معالجة البريد الإلكتروني
+    if (fieldType === 'email' || fieldId.includes('email') || fieldId.includes('بريد')) {
+        return convertEmailFromSpeech(text);
+    }
+    
+    // معالجة أرقام الهواتف
+    if (fieldId.includes('phone') || fieldId.includes('هاتف') || fieldId.includes('جوال')) {
+        return formatPhoneNumber(extractNumbers(text));
+    }
+    
+    return text;
+}
+
+function extractNumbers(text) {
+    // استخراج الأرقام من النص
+    return text.replace(/[^\d]/g, '');
+}
+
+function convertDateFromSpeech(text) {
+    // تحويل التاريخ المنطوق إلى تنسيق رقمي
+    const today = new Date();
+    
+    if (text.includes('اليوم')) {
+        return today.toISOString().split('T')[0];
+    }
+    
+    if (text.includes('أمس')) {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return yesterday.toISOString().split('T')[0];
+    }
+    
+    if (text.includes('غداً') || text.includes('غدا')) {
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
+    }
+    
+    // استخراج أرقام التاريخ
+    const numbers = text.match(/\d+/g);
+    if (numbers && numbers.length >= 3) {
+        const day = numbers[0].padStart(2, '0');
+        const month = numbers[1].padStart(2, '0');
+        const year = numbers[2].length === 2 ? '20' + numbers[2] : numbers[2];
+        return `${year}-${month}-${day}`;
+    }
+    
+    return text;
+}
+
+function convertEmailFromSpeech(text) {
+    // تحويل البريد الإلكتروني المنطوق
+    let email = text.toLowerCase()
+        .replace(/\s+/g, '')
+        .replace('نقطة', '.')
+        .replace('دوت', '.')
+        .replace('أت', '@')
+        .replace('ات', '@')
+        .replace('في', '@');
+    
+    return email;
+}
+
+function formatPhoneNumber(numbers) {
+    // تنسيق رقم الهاتف
+    if (numbers.length === 11 && numbers.startsWith('07')) {
+        return numbers;
+    }
+    
+    if (numbers.length === 10 && numbers.startsWith('7')) {
+        return '0' + numbers;
+    }
+    
+    return numbers;
 }
 
 // ==============================
-// إدراج النص في الحقل
+// إدارة القوائم المنسدلة
 // ==============================
-function insertTextToField(text) {
-    if (!currentField || !text) return;
+function selectBestOption(selectField, spokenText) {
+    const options = Array.from(selectField.options);
+    const lowerSpokenText = spokenText.toLowerCase();
     
-    if (currentVoiceSettings.confirmBeforeInsert) {
-        if (!confirm(`هل تريد إدراج النص التالي؟\n"${text}"`)) {
-            return;
-        }
+    // البحث عن تطابق مباشر
+    let bestMatch = options.find(option => 
+        option.text.toLowerCase().includes(lowerSpokenText) ||
+        option.value.toLowerCase().includes(lowerSpokenText)
+    );
+    
+    // إذا لم يجد تطابق، ابحث عن أفضل تطابق جزئي
+    if (!bestMatch) {
+        bestMatch = options.find(option => {
+            const optionWords = option.text.toLowerCase().split(' ');
+            const spokenWords = lowerSpokenText.split(' ');
+            
+            return spokenWords.some(spokenWord => 
+                optionWords.some(optionWord => 
+                    optionWord.includes(spokenWord) || spokenWord.includes(optionWord)
+                )
+            );
+        });
     }
     
-    // إدراج النص حسب نوع الحقل
-    if (currentField.tagName.toLowerCase() === 'select') {
-        // البحث عن الخيار المطابق في select
-        const options = Array.from(currentField.options);
-        const matchingOption = options.find(option => 
-            option.text.toLowerCase().includes(text.toLowerCase()) ||
-            option.value.toLowerCase().includes(text.toLowerCase())
-        );
-        
-        if (matchingOption) {
-            currentField.value = matchingOption.value;
-            showVoiceToast(`تم اختيار: ${matchingOption.text}`, 'success');
-        } else {
-            showVoiceToast('لم يتم العثور على خيار مطابق', 'warning');
-        }
+    if (bestMatch) {
+        selectField.value = bestMatch.value;
+        selectField.dispatchEvent(new Event('change', { bubbles: true }));
+        showVoiceToast(`تم اختيار: "${bestMatch.text}"`, 'success');
     } else {
-        // إدراج النص في الحقول النصية
-        if (currentVoiceSettings.autoInsert) {
-            const currentValue = currentField.value;
-            const newValue = currentValue ? currentValue + ' ' + text : text;
-            currentField.value = newValue;
-        } else {
-            currentField.value = text;
-        }
-        
-        // تشغيل أحداث التغيير
-        currentField.dispatchEvent(new Event('input', { bubbles: true }));
-        currentField.dispatchEvent(new Event('change', { bubbles: true }));
-        
-        showVoiceToast('تم إدراج النص بنجاح', 'success');
+        showVoiceToast('لم يتم العثور على خيار مناسب', 'warning');
     }
-    
-    // تحديث حالة الزر
-    const currentMicButton = micButtons.find(({ field }) => field === currentField)?.button;
-    if (currentMicButton) {
-        updateMicButtonState(currentMicButton, 'success');
-    }
-    
-    // التركيز على الحقل
-    currentField.focus();
 }
 
 // ==============================
-// إظهار النتائج المؤقتة
+// تحديث حالة أزرار المايكروفون
+// ==============================
+function updateMicButtonState(inputField, state) {
+    const micButton = micButtons.get(inputField);
+    if (!micButton) return;
+    
+    // إزالة جميع حالات الأزرار
+    micButton.classList.remove('listening', 'processing', 'success', 'error');
+    
+    // إضافة الحالة الجديدة
+    if (state !== 'idle') {
+        micButton.classList.add(state);
+    }
+    
+    // تحديث التلميح
+    const tooltips = {
+        idle: 'إدخال بالصوت',
+        listening: 'جاري الاستماع... اضغط للإيقاف',
+        processing: 'جاري المعالجة...',
+        success: 'تم بنجاح',
+        error: 'حدث خطأ'
+    };
+    
+    micButton.title = tooltips[state] || tooltips.idle;
+}
+
+// ==============================
+// عرض النتائج المؤقتة
 // ==============================
 function showInterimResult(text) {
-    // يمكن إضافة مؤشر للنص المؤقت هنا
-    console.log('نتيجة مؤقتة:', text);
+    let interimDisplay = document.getElementById('voice-interim-result');
+    
+    if (!interimDisplay) {
+        interimDisplay = document.createElement('div');
+        interimDisplay.id = 'voice-interim-result';
+        interimDisplay.className = 'voice-interim-display';
+        document.body.appendChild(interimDisplay);
+    }
+    
+    interimDisplay.textContent = text;
+    interimDisplay.style.display = 'block';
+    
+    // تحديد موقع العرض بالقرب من الحقل النشط
+    if (currentTargetInput) {
+        const rect = currentTargetInput.getBoundingClientRect();
+        interimDisplay.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+        interimDisplay.style.left = (rect.left + window.scrollX) + 'px';
+    }
+}
+
+function hideInterimResult() {
+    const interimDisplay = document.getElementById('voice-interim-result');
+    if (interimDisplay) {
+        interimDisplay.style.display = 'none';
+    }
 }
 
 // ==============================
-// تشغيل صوت التنبيه
-// ==============================
-function playBeep(type) {
-    if (!currentVoiceSettings.enableBeep) return;
-    
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.setValueAtTime(type === 'start' ? 800 : 400, audioContext.currentTime);
-    oscillator.type = 'sine';
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
-}
-
-// ==============================
-// النطق (Text to Speech)
-// ==============================
-function speak(text) {
-    if (!currentVoiceSettings.voiceFeedback || !window.speechSynthesis) return;
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = currentVoiceSettings.language;
-    utterance.rate = 0.8;
-    utterance.pitch = 1;
-    utterance.volume = 0.7;
-    
-    window.speechSynthesis.speak(utterance);
-}
-
-// ==============================
-// إنشاء لوحة تحكم الإعدادات الصوتية
+// لوحة التحكم في الإعدادات الصوتية
 // ==============================
 function createVoiceControlPanel() {
-    const controlPanel = document.createElement('div');
-    controlPanel.id = 'voice-control-panel';
-    controlPanel.style.display = 'none';
-    controlPanel.innerHTML = `
+    const panel = document.createElement('div');
+    panel.id = 'voice-control-panel';
+    panel.innerHTML = `
         <div class="voice-control-overlay">
             <div class="voice-control-container">
                 <div class="voice-control-header">
                     <h3>🎤 إعدادات الإدخال الصوتي</h3>
-                    <button class="close-voice-control-btn" onclick="closeVoiceControlPanel()">✕</button>
+                    <button class="close-voice-btn" onclick="closeVoiceControlPanel()">✕</button>
                 </div>
                 
                 <div class="voice-control-body">
-                    <div class="voice-control-section">
-                        <h4>🌐 إعدادات اللغة</h4>
-                        <div class="control-row">
-                            <label>اللغة:</label>
-                            <select id="voiceLanguage">
-                                ${Object.entries(currentVoiceSettings.supportedLanguages).map(([code, name]) => 
-                                    `<option value="${code}" ${code === currentVoiceSettings.language ? 'selected' : ''}>${name}</option>`
-                                ).join('')}
-                            </select>
-                        </div>
+                    <div class="voice-control-tabs">
+                        <button class="voice-tab-btn active" onclick="showVoiceTab('language')">اللغة</button>
+                        <button class="voice-tab-btn" onclick="showVoiceTab('appearance')">المظهر</button>
+                        <button class="voice-tab-btn" onclick="showVoiceTab('behavior')">السلوك</button>
+                        <button class="voice-tab-btn" onclick="showVoiceTab('advanced')">متقدم</button>
                     </div>
                     
-                    <div class="voice-control-section">
-                        <h4>⚙️ إعدادات التسجيل</h4>
-                        <div class="control-row">
-                            <label>إظهار النتائج المؤقتة:</label>
-                            <input type="checkbox" id="interimResults" ${currentVoiceSettings.interimResults ? 'checked' : ''}>
+                    <div class="voice-control-content">
+                        <!-- تبويب اللغة -->
+                        <div class="voice-tab-content active" id="language-tab">
+                            <div class="voice-control-section">
+                                <h4>🌍 إعدادات اللغة</h4>
+                                <div class="voice-control-row">
+                                    <label>اللغة الأساسية:</label>
+                                    <select id="voiceLanguage">
+                                        ${currentVoiceSettings.supportedLanguages.map(lang => 
+                                            `<option value="${lang.code}" ${lang.code === currentVoiceSettings.language ? 'selected' : ''}>
+                                                ${lang.flag} ${lang.name}
+                                            </option>`
+                                        ).join('')}
+                                    </select>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>الكتابة التلقائية:</label>
+                                    <input type="checkbox" id="autoCapitalize" ${currentVoiceSettings.autoCapitalize ? 'checked' : ''}>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>التصحيح التلقائي:</label>
+                                    <input type="checkbox" id="autoCorrect" ${currentVoiceSettings.autoCorrect ? 'checked' : ''}>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>علامات الترقيم:</label>
+                                    <input type="checkbox" id="enablePunctuation" ${currentVoiceSettings.enablePunctuation ? 'checked' : ''}>
+                                </div>
+                            </div>
                         </div>
-                        <div class="control-row">
-                            <label>مهلة التسجيل (ثانية):</label>
-                            <input type="range" id="voiceTimeout" min="5" max="30" value="${currentVoiceSettings.timeout / 1000}">
-                            <span id="timeoutValue">${currentVoiceSettings.timeout / 1000}s</span>
+                        
+                        <!-- تبويب المظهر -->
+                        <div class="voice-tab-content" id="appearance-tab">
+                            <div class="voice-control-section">
+                                <h4>🎨 إعدادات المظهر</h4>
+                                <div class="voice-control-row">
+                                    <label>إظهار أزرار المايكروفون:</label>
+                                    <input type="checkbox" id="showMicButton" ${currentVoiceSettings.showMicButton ? 'checked' : ''}>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>حجم الأزرار:</label>
+                                    <select id="buttonSize">
+                                        <option value="small" ${currentVoiceSettings.buttonSize === 'small' ? 'selected' : ''}>صغير</option>
+                                        <option value="normal" ${currentVoiceSettings.buttonSize === 'normal' ? 'selected' : ''}>عادي</option>
+                                        <option value="large" ${currentVoiceSettings.buttonSize === 'large' ? 'selected' : ''}>كبير</option>
+                                    </select>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>موقع الأزرار:</label>
+                                    <select id="buttonPosition">
+                                        <option value="right" ${currentVoiceSettings.buttonPosition === 'right' ? 'selected' : ''}>يمين</option>
+                                        <option value="left" ${currentVoiceSettings.buttonPosition === 'left' ? 'selected' : ''}>يسار</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="voice-control-section">
-                        <h4>🔊 إعدادات الصوت</h4>
-                        <div class="control-row">
-                            <label>صوت التنبيه:</label>
-                            <input type="checkbox" id="enableBeep" ${currentVoiceSettings.enableBeep ? 'checked' : ''}>
+                        
+                        <!-- تبويب السلوك -->
+                        <div class="voice-tab-content" id="behavior-tab">
+                            <div class="voice-control-section">
+                                <h4>⚙️ إعدادات السلوك</h4>
+                                <div class="voice-control-row">
+                                    <label>تأكيد قبل الإدخال:</label>
+                                    <input type="checkbox" id="confirmBeforeInput" ${currentVoiceSettings.confirmBeforeInput ? 'checked' : ''}>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>مهلة التسجيل (ثانية):</label>
+                                    <input type="range" id="timeoutDuration" min="5" max="30" value="${currentVoiceSettings.timeoutDuration / 1000}">
+                                    <span id="timeoutValue">${currentVoiceSettings.timeoutDuration / 1000}s</span>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>تفعيل الأصوات:</label>
+                                    <input type="checkbox" id="enableSounds" ${currentVoiceSettings.enableSounds ? 'checked' : ''}>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>تفعيل الاهتزاز:</label>
+                                    <input type="checkbox" id="enableVibration" ${currentVoiceSettings.enableVibration ? 'checked' : ''}>
+                                </div>
+                            </div>
                         </div>
-                        <div class="control-row">
-                            <label>ردود فعل صوتية:</label>
-                            <input type="checkbox" id="voiceFeedback" ${currentVoiceSettings.voiceFeedback ? 'checked' : ''}>
-                        </div>
-                    </div>
-                    
-                    <div class="voice-control-section">
-                        <h4>📝 إعدادات النص</h4>
-                        <div class="control-row">
-                            <label>إدراج تلقائي:</label>
-                            <input type="checkbox" id="autoInsert" ${currentVoiceSettings.autoInsert ? 'checked' : ''}>
-                        </div>
-                        <div class="control-row">
-                            <label>تأكيد قبل الإدراج:</label>
-                            <input type="checkbox" id="confirmBeforeInsert" ${currentVoiceSettings.confirmBeforeInsert ? 'checked' : ''}>
-                        </div>
-                        <div class="control-row">
-                            <label>كتابة الحرف الأول بحروف كبيرة:</label>
-                            <input type="checkbox" id="autoCapitalize" ${currentVoiceSettings.autoCapitalize ? 'checked' : ''}>
-                        </div>
-                        <div class="control-row">
-                            <label>التصحيح التلقائي:</label>
-                            <input type="checkbox" id="autoCorrect" ${currentVoiceSettings.autoCorrect ? 'checked' : ''}>
-                        </div>
-                        <div class="control-row">
-                            <label>تحويل الأرقام المنطوقة:</label>
-                            <input type="checkbox" id="numberConversion" ${currentVoiceSettings.numberConversion ? 'checked' : ''}>
+                        
+                        <!-- تبويب متقدم -->
+                        <div class="voice-tab-content" id="advanced-tab">
+                            <div class="voice-control-section">
+                                <h4>🔧 إعدادات متقدمة</h4>
+                                <div class="voice-control-row">
+                                    <label>التسجيل المستمر:</label>
+                                    <input type="checkbox" id="continuous" ${currentVoiceSettings.continuous ? 'checked' : ''}>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>النتائج المؤقتة:</label>
+                                    <input type="checkbox" id="interimResults" ${currentVoiceSettings.interimResults ? 'checked' : ''}>
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>عدد البدائل:</label>
+                                    <input type="number" id="maxAlternatives" min="1" max="10" value="${currentVoiceSettings.maxAlternatives}">
+                                </div>
+                                <div class="voice-control-row">
+                                    <label>مستوى الصوت:</label>
+                                    <input type="range" id="volume" min="0" max="1" step="0.1" value="${currentVoiceSettings.volume}">
+                                    <span id="volumeValue">${Math.round(currentVoiceSettings.volume * 100)}%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="voice-control-section">
+                                <h4>🧪 اختبار النظام</h4>
+                                <button class="voice-test-btn" onclick="testVoiceSystem()">🎤 اختبار المايكروفون</button>
+                                <button class="voice-test-btn" onclick="testVoiceSounds()">🔊 اختبار الأصوات</button>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="voice-control-footer">
-                    <button class="voice-control-btn test-btn" onclick="testVoiceInput()">🎤 اختبار الصوت</button>
-                    <button class="voice-control-btn save-btn" onclick="saveVoiceSettings()">💾 حفظ الإعدادات</button>
+                    <button class="voice-control-btn apply-btn" onclick="applyVoiceSettings()">✅ تطبيق</button>
+                    <button class="voice-control-btn save-btn" onclick="saveVoiceSettings()">💾 حفظ</button>
                     <button class="voice-control-btn reset-btn" onclick="resetVoiceSettings()">🔄 إعادة تعيين</button>
+                    <button class="voice-control-btn export-btn" onclick="exportVoiceSettings()">📤 تصدير</button>
+                    <button class="voice-control-btn import-btn" onclick="importVoiceSettings()">📥 استيراد</button>
                 </div>
             </div>
         </div>
     `;
     
     // إضافة الأنماط
+    addVoiceStyles();
+    
+    document.body.appendChild(panel);
+    voiceControlPanel = panel;
+    
+    // إعداد المستمعين للإعدادات
+    setupVoiceSettingsListeners();
+}
+
+// ==============================
+// إضافة أنماط CSS
+// ==============================
+function addVoiceStyles() {
+    if (document.getElementById('voice-input-styles')) return;
+    
     const styles = document.createElement('style');
-    styles.id = 'voice-control-styles';
+    styles.id = 'voice-input-styles';
     styles.textContent = `
+        /* أنماط أزرار المايكروفون */
+        .voice-input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .voice-mic-button {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .voice-mic-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .voice-mic-button.mic-small {
+            width: 30px;
+            height: 30px;
+        }
+        
+        .voice-mic-button.mic-normal {
+            width: 36px;
+            height: 36px;
+        }
+        
+        .voice-mic-button.mic-large {
+            width: 42px;
+            height: 42px;
+        }
+        
+        .voice-mic-button svg {
+            width: 60%;
+            height: 60%;
+        }
+        
+        .voice-mic-button.listening {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            animation: voicePulse 1s infinite;
+        }
+        
+        .voice-mic-button.processing {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+        
+        .voice-mic-button.success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+        
+        .voice-mic-button.error {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        @keyframes voicePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        
+        .mic-status {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        
+        .voice-mic-button.listening .mic-status {
+            background: #e74c3c;
+            animation: voiceBlink 0.5s infinite;
+        }
+        
+        @keyframes voiceBlink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        /* عرض النتائج المؤقتة */
+        .voice-interim-display {
+            position: absolute;
+            background: rgba(52, 152, 219, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 10000;
+            max-width: 300px;
+            word-wrap: break-word;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        
+        .voice-interim-display::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 20px;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 5px solid rgba(52, 152, 219, 0.9);
+        }
+        
+        /* لوحة التحكم */
         .voice-control-overlay {
             position: fixed;
             top: 0;
@@ -889,24 +959,30 @@ function createVoiceControlPanel() {
             height: 100vh;
             background: rgba(0, 0, 0, 0.8);
             z-index: 10000;
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             padding: 20px;
+        }
+        
+        .voice-control-overlay.show {
+            display: flex;
         }
         
         .voice-control-container {
             background: white;
             border-radius: 15px;
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             max-height: 90vh;
             overflow: hidden;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
         }
         
         .voice-control-header {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
             padding: 20px;
             display: flex;
@@ -920,7 +996,7 @@ function createVoiceControlPanel() {
             font-weight: 600;
         }
         
-        .close-voice-control-btn {
+        .close-voice-btn {
             background: rgba(255, 255, 255, 0.2);
             border: none;
             color: white;
@@ -932,19 +1008,67 @@ function createVoiceControlPanel() {
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: background 0.3s;
+        }
+        
+        .close-voice-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
         
         .voice-control-body {
-            padding: 20px;
-            max-height: 60vh;
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .voice-control-tabs {
+            display: flex;
+            border-bottom: 1px solid #e3e6f0;
+            background: #f8f9fa;
+        }
+        
+        .voice-tab-btn {
+            background: none;
+            border: none;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .voice-tab-btn:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .voice-tab-btn.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            background: white;
+        }
+        
+        .voice-control-content {
+            flex: 1;
             overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .voice-tab-content {
+            display: none;
+        }
+        
+        .voice-tab-content.active {
+            display: block;
         }
         
         .voice-control-section {
             margin-bottom: 25px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
         }
         
         .voice-control-section h4 {
@@ -952,45 +1076,64 @@ function createVoiceControlPanel() {
             margin-bottom: 15px;
             font-size: 16px;
             font-weight: 600;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e3e6f0;
         }
         
-        .control-row {
+        .voice-control-row {
             display: flex;
             align-items: center;
             margin-bottom: 12px;
             gap: 15px;
         }
         
-        .control-row label {
-            min-width: 180px;
+        .voice-control-row label {
+            min-width: 150px;
             font-weight: 500;
             color: #495057;
             font-size: 14px;
         }
         
-        .control-row input,
-        .control-row select {
+        .voice-control-row input,
+        .voice-control-row select {
             flex: 1;
             padding: 8px 12px;
             border: 2px solid #e3e6f0;
             border-radius: 6px;
             font-size: 14px;
+            transition: border-color 0.3s;
         }
         
-        .control-row input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
+        .voice-control-row input:focus,
+        .voice-control-row select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .voice-control-row input[type="checkbox"] {
+            width: auto;
             flex: none;
         }
         
-        .control-row input[type="range"] {
+        .voice-control-row input[type="range"] {
             flex: 1;
         }
         
-        #timeoutValue {
-            min-width: 40px;
-            font-weight: 600;
-            color: #3498db;
+        .voice-test-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        
+        .voice-test-btn:hover {
+            background: #138496;
         }
         
         .voice-control-footer {
@@ -999,8 +1142,8 @@ function createVoiceControlPanel() {
             border-top: 1px solid #e3e6f0;
             display: flex;
             gap: 10px;
-            justify-content: center;
             flex-wrap: wrap;
+            justify-content: center;
         }
         
         .voice-control-btn {
@@ -1010,17 +1153,21 @@ function createVoiceControlPanel() {
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
             display: flex;
             align-items: center;
             gap: 8px;
-            min-width: 130px;
+            min-width: 120px;
             justify-content: center;
         }
         
-        .test-btn {
+        .apply-btn {
             background: #17a2b8;
             color: white;
+        }
+        
+        .apply-btn:hover {
+            background: #138496;
         }
         
         .save-btn {
@@ -1028,29 +1175,67 @@ function createVoiceControlPanel() {
             color: white;
         }
         
+        .save-btn:hover {
+            background: #218838;
+        }
+        
         .reset-btn {
             background: #ffc107;
             color: #212529;
         }
         
-        .voice-control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        .reset-btn:hover {
+            background: #e0a800;
         }
         
+        .export-btn {
+            background: #6f42c1;
+            color: white;
+        }
+        
+        .export-btn:hover {
+            background: #5a359a;
+        }
+        
+        .import-btn {
+            background: #fd7e14;
+            color: white;
+        }
+        
+        .import-btn:hover {
+            background: #dc6502;
+        }
+        
+        /* تحسينات للهواتف */
         @media (max-width: 768px) {
             .voice-control-overlay {
                 padding: 10px;
             }
             
-            .control-row {
+            .voice-control-container {
+                max-height: 95vh;
+            }
+            
+            .voice-control-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .voice-tab-btn {
+                flex: none;
+                min-width: 100px;
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+            
+            .voice-control-row {
                 flex-direction: column;
                 align-items: stretch;
                 gap: 8px;
             }
             
-            .control-row label {
+            .voice-control-row label {
                 min-width: auto;
+                font-size: 13px;
             }
             
             .voice-control-footer {
@@ -1061,120 +1246,161 @@ function createVoiceControlPanel() {
                 width: 100%;
                 min-width: auto;
             }
+            
+            .voice-input-container {
+                flex-wrap: wrap;
+            }
+            
+            .voice-mic-button.mic-small {
+                width: 28px;
+                height: 28px;
+            }
+            
+            .voice-mic-button.mic-normal {
+                width: 32px;
+                height: 32px;
+            }
+            
+            .voice-mic-button.mic-large {
+                width: 38px;
+                height: 38px;
+            }
+        }
+        
+        /* إشعارات صوتية */
+        .voice-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #3498db;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10001;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+        
+        .voice-toast.show {
+            transform: translateX(0);
+        }
+        
+        .voice-toast.success {
+            background: #27ae60;
+        }
+        
+        .voice-toast.error {
+            background: #e74c3c;
+        }
+        
+        .voice-toast.warning {
+            background: #f39c12;
+        }
+        
+        .voice-toast.info {
+            background: #3498db;
         }
     `;
     
     document.head.appendChild(styles);
-    document.body.appendChild(controlPanel);
-    
-    // إضافة معالج تحديث مهلة التسجيل
-    const timeoutSlider = controlPanel.querySelector('#voiceTimeout');
-    const timeoutValue = controlPanel.querySelector('#timeoutValue');
-    
-    timeoutSlider.addEventListener('input', function() {
-        timeoutValue.textContent = this.value + 's';
-    });
-    
-    voiceControlPanel = controlPanel;
 }
 
 // ==============================
-// إظهار لوحة التحكم الصوتي
+// وظائف لوحة التحكم
 // ==============================
 function showVoiceControlPanel() {
-    if (voiceControlPanel) {
-        voiceControlPanel.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+    if (!voiceControlPanel) {
+        createVoiceControlPanel();
     }
+    
+    const overlay = voiceControlPanel.querySelector('.voice-control-overlay');
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
 }
 
-// ==============================
-// إغلاق لوحة التحكم الصوتي
-// ==============================
 function closeVoiceControlPanel() {
     if (voiceControlPanel) {
-        voiceControlPanel.style.display = 'none';
+        const overlay = voiceControlPanel.querySelector('.voice-control-overlay');
+        overlay.classList.remove('show');
         document.body.style.overflow = 'auto';
     }
 }
 
-// ==============================
-// اختبار الإدخال الصوتي
-// ==============================
-function testVoiceInput() {
-    // إنشاء حقل اختبار مؤقت
-    const testField = document.createElement('input');
-    testField.type = 'text';
-    testField.placeholder = 'حقل اختبار...';
-    testField.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 10002;
-        padding: 15px;
-        border: 2px solid #3498db;
-        border-radius: 8px;
-        font-size: 16px;
-        width: 300px;
-        text-align: center;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-    `;
+function showVoiceTab(tabName) {
+    // إخفاء جميع التبويبات
+    document.querySelectorAll('.voice-tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
     
-    document.body.appendChild(testField);
+    document.querySelectorAll('.voice-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
     
-    // محاكاة إضافة مايكروفون للحقل
-    addMicrophoneToField(testField);
-    
-    // إظهار رسالة تعليمات
-    showVoiceToast('تم إنشاء حقل اختبار. اضغط على المايكروفون لتجربة الإدخال الصوتي', 'info');
-    
-    // إزالة الحقل بعد 30 ثانية
-    setTimeout(() => {
-        if (document.body.contains(testField)) {
-            const wrapper = testField.closest('.voice-input-wrapper');
-            if (wrapper) {
-                document.body.removeChild(wrapper);
-            } else {
-                document.body.removeChild(testField);
-            }
-        }
-    }, 30000);
+    // إظهار التبويب المطلوب
+    document.getElementById(tabName + '-tab').classList.add('active');
+    event.target.classList.add('active');
 }
 
 // ==============================
-// حفظ إعدادات الصوت
+// إدارة الإعدادات
 // ==============================
+function setupVoiceSettingsListeners() {
+    // مستمع تغيير مهلة التسجيل
+    const timeoutSlider = document.getElementById('timeoutDuration');
+    const timeoutValue = document.getElementById('timeoutValue');
+    
+    if (timeoutSlider && timeoutValue) {
+        timeoutSlider.addEventListener('input', function() {
+            timeoutValue.textContent = this.value + 's';
+        });
+    }
+    
+    // مستمع تغيير مستوى الصوت
+    const volumeSlider = document.getElementById('volume');
+    const volumeValue = document.getElementById('volumeValue');
+    
+    if (volumeSlider && volumeValue) {
+        volumeSlider.addEventListener('input', function() {
+            volumeValue.textContent = Math.round(this.value * 100) + '%';
+        });
+    }
+}
+
+function applyVoiceSettings() {
+    updateVoiceSettingsFromForm();
+    
+    // تطبيق إعدادات المحرك
+    if (recognition) {
+        recognition.lang = currentVoiceSettings.language;
+        recognition.continuous = currentVoiceSettings.continuous;
+        recognition.interimResults = currentVoiceSettings.interimResults;
+        recognition.maxAlternatives = currentVoiceSettings.maxAlternatives;
+    }
+    
+    // تحديث أزرار المايكروفون
+    updateMicrophoneButtons();
+    
+    showVoiceToast('تم تطبيق الإعدادات', 'success');
+}
+
 function saveVoiceSettings() {
-    // جمع الإعدادات من النموذج
-    currentVoiceSettings.language = document.getElementById('voiceLanguage').value;
-    currentVoiceSettings.interimResults = document.getElementById('interimResults').checked;
-    currentVoiceSettings.timeout = parseInt(document.getElementById('voiceTimeout').value) * 1000;
-    currentVoiceSettings.enableBeep = document.getElementById('enableBeep').checked;
-    currentVoiceSettings.voiceFeedback = document.getElementById('voiceFeedback').checked;
-    currentVoiceSettings.autoInsert = document.getElementById('autoInsert').checked;
-    currentVoiceSettings.confirmBeforeInsert = document.getElementById('confirmBeforeInsert').checked;
-    currentVoiceSettings.autoCapitalize = document.getElementById('autoCapitalize').checked;
-    currentVoiceSettings.autoCorrect = document.getElementById('autoCorrect').checked;
-    currentVoiceSettings.numberConversion = document.getElementById('numberConversion').checked;
+    updateVoiceSettingsFromForm();
     
     try {
         localStorage.setItem('charity_voice_settings', JSON.stringify(currentVoiceSettings));
-        
-        // إعادة تهيئة خدمة التعرف على الصوت
-        initializeSpeechRecognition();
-        
+        applyVoiceSettings();
         showVoiceToast('تم حفظ الإعدادات بنجاح', 'success');
-        closeVoiceControlPanel();
     } catch (error) {
         console.error('خطأ في حفظ إعدادات الصوت:', error);
         showVoiceToast('فشل في حفظ الإعدادات', 'error');
     }
 }
 
-// ==============================
-// تحميل إعدادات الصوت
-// ==============================
 function loadVoiceSettings() {
     try {
         const savedSettings = localStorage.getItem('charity_voice_settings');
@@ -1189,54 +1415,192 @@ function loadVoiceSettings() {
     }
 }
 
-// ==============================
-// إعادة تعيين إعدادات الصوت
-// ==============================
 function resetVoiceSettings() {
-    if (confirm('هل أنت متأكد من إعادة تعيين جميع إعدادات الصوت إلى القيم الافتراضية؟')) {
+    if (confirm('هل أنت متأكد من إعادة تعيين جميع إعدادات الصوت؟')) {
         currentVoiceSettings = { ...DEFAULT_VOICE_SETTINGS };
-        
-        // تحديث النموذج
-        document.getElementById('voiceLanguage').value = currentVoiceSettings.language;
-        document.getElementById('interimResults').checked = currentVoiceSettings.interimResults;
-        document.getElementById('voiceTimeout').value = currentVoiceSettings.timeout / 1000;
-        document.getElementById('timeoutValue').textContent = (currentVoiceSettings.timeout / 1000) + 's';
-        document.getElementById('enableBeep').checked = currentVoiceSettings.enableBeep;
-        document.getElementById('voiceFeedback').checked = currentVoiceSettings.voiceFeedback;
-        document.getElementById('autoInsert').checked = currentVoiceSettings.autoInsert;
-        document.getElementById('confirmBeforeInsert').checked = currentVoiceSettings.confirmBeforeInsert;
-        document.getElementById('autoCapitalize').checked = currentVoiceSettings.autoCapitalize;
-        document.getElementById('autoCorrect').checked = currentVoiceSettings.autoCorrect;
-        document.getElementById('numberConversion').checked = currentVoiceSettings.numberConversion;
-        
-        showVoiceToast('تم إعادة تعيين الإعدادات إلى القيم الافتراضية', 'info');
+        setVoiceSettingsToForm();
+        applyVoiceSettings();
+        showVoiceToast('تم إعادة تعيين الإعدادات', 'info');
     }
 }
 
+function updateVoiceSettingsFromForm() {
+    const formElements = document.querySelectorAll('#voice-control-panel input, #voice-control-panel select');
+    
+    formElements.forEach(element => {
+        if (element.id && currentVoiceSettings.hasOwnProperty(element.id)) {
+            if (element.type === 'checkbox') {
+                currentVoiceSettings[element.id] = element.checked;
+            } else if (element.type === 'range' && element.id === 'timeoutDuration') {
+                currentVoiceSettings[element.id] = parseInt(element.value) * 1000;
+            } else if (element.type === 'range' && element.id === 'volume') {
+                currentVoiceSettings[element.id] = parseFloat(element.value);
+            } else {
+                currentVoiceSettings[element.id] = element.value;
+            }
+        }
+    });
+}
+
+function setVoiceSettingsToForm() {
+    Object.keys(currentVoiceSettings).forEach(key => {
+        const element = document.getElementById(key);
+        if (element) {
+            if (element.type === 'checkbox') {
+                element.checked = currentVoiceSettings[key];
+            } else if (element.type === 'range' && key === 'timeoutDuration') {
+                element.value = currentVoiceSettings[key] / 1000;
+            } else {
+                element.value = currentVoiceSettings[key];
+            }
+        }
+    });
+}
+
 // ==============================
-// مراقبة الحقول الجديدة
+// اختبار النظام
 // ==============================
-function observeNewFields() {
+function testVoiceSystem() {
+    if (!recognition) {
+        showVoiceToast('المحرك غير متاح للاختبار', 'error');
+        return;
+    }
+    
+    showVoiceToast('قل شيئاً لاختبار النظام...', 'info');
+    
+    // إنشاء حقل اختبار مؤقت
+    const testInput = document.createElement('input');
+    testInput.type = 'text';
+    testInput.placeholder = 'نتيجة الاختبار ستظهر هنا';
+    testInput.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10002;
+        padding: 15px;
+        font-size: 16px;
+        border: 2px solid #3498db;
+        border-radius: 8px;
+        width: 300px;
+        text-align: center;
+        background: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    `;
+    
+    document.body.appendChild(testInput);
+    
+    // بدء التسجيل
+    currentTargetInput = testInput;
+    recognition.start();
+    
+    // إزالة الحقل بعد 15 ثانية
+    setTimeout(() => {
+        if (document.body.contains(testInput)) {
+            document.body.removeChild(testInput);
+        }
+        currentTargetInput = null;
+    }, 15000);
+}
+
+function testVoiceSounds() {
+    showVoiceToast('اختبار الأصوات...', 'info');
+    
+    setTimeout(() => playVoiceSound('start'), 500);
+    setTimeout(() => playVoiceSound('success'), 1500);
+    setTimeout(() => playVoiceSound('error'), 2500);
+    setTimeout(() => playVoiceSound('end'), 3500);
+}
+
+// ==============================
+// تصدير واستيراد الإعدادات
+// ==============================
+function exportVoiceSettings() {
+    updateVoiceSettingsFromForm();
+    
+    const exportData = {
+        voiceSettings: currentVoiceSettings,
+        exportDate: new Date().toISOString(),
+        version: '1.0.0'
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `voice_settings_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    showVoiceToast('تم تصدير إعدادات الصوت', 'success');
+}
+
+function importVoiceSettings() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importData = JSON.parse(e.target.result);
+                
+                if (importData.voiceSettings) {
+                    currentVoiceSettings = { ...DEFAULT_VOICE_SETTINGS, ...importData.voiceSettings };
+                    setVoiceSettingsToForm();
+                    applyVoiceSettings();
+                    showVoiceToast('تم استيراد إعدادات الصوت', 'success');
+                } else {
+                    showVoiceToast('تنسيق الملف غير صحيح', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في استيراد الإعدادات:', error);
+                showVoiceToast('خطأ في قراءة ملف الإعدادات', 'error');
+            }
+        };
+        
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
+
+// ==============================
+// وظائف مساعدة
+// ==============================
+function updateMicrophoneButtons() {
+    // إعادة إنشاء الأزرار مع الإعدادات الجديدة
+    micButtons.forEach((button, input) => {
+        button.remove();
+    });
+    
+    micButtons.clear();
+    
+    if (currentVoiceSettings.showMicButton) {
+        addMicrophoneButtons();
+    }
+}
+
+function observeNewInputFields() {
+    // مراقبة إضافة حقول جديدة
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
             mutation.addedNodes.forEach(function(node) {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    // البحث عن حقول إدخال جديدة
-                    const newFields = node.querySelectorAll ? 
+                if (node.nodeType === 1) { // عنصر HTML
+                    // البحث عن حقول الإدخال الجديدة
+                    const newInputs = node.querySelectorAll ? 
                         node.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"], textarea, select') : 
                         [];
                     
-                    newFields.forEach(field => {
-                        if (!shouldExcludeField(field) && !field.closest('.voice-input-wrapper')) {
-                            addMicrophoneToField(field);
-                        }
-                    });
+                    newInputs.forEach(addMicButtonToField);
                     
-                    // فحص العقدة نفسها إذا كانت حقل إدخال
+                    // إذا كان العنصر نفسه حقل إدخال
                     if (node.matches && node.matches('input[type="text"], input[type="number"], input[type="tel"], input[type="email"], textarea, select')) {
-                        if (!shouldExcludeField(node) && !node.closest('.voice-input-wrapper')) {
-                            addMicrophoneToField(node);
-                        }
+                        addMicButtonToField(node);
                     }
                 }
             });
@@ -1249,28 +1613,91 @@ function observeNewFields() {
     });
 }
 
-// ==============================
-// إعداد اختصارات لوحة المفاتيح
-// ==============================
-function setupVoiceKeyboardShortcuts() {
-    document.addEventListener('keydown', function(e) {
-        // Ctrl+Shift+V لبدء الإدخال الصوتي للحقل المركز عليه
-        if (e.ctrlKey && e.shiftKey && e.key === 'V') {
-            e.preventDefault();
-            
-            const focusedElement = document.activeElement;
-            if (focusedElement && (focusedElement.tagName === 'INPUT' || focusedElement.tagName === 'TEXTAREA' || focusedElement.tagName === 'SELECT')) {
-                const micButtonData = micButtons.find(({ field }) => field === focusedElement);
-                if (micButtonData) {
-                    startVoiceInput(focusedElement, micButtonData.button);
-                }
-            } else {
-                showVoiceToast('يرجى التركيز على حقل إدخال أولاً', 'info');
-            }
-        }
+function playVoiceSound(soundType) {
+    if (!currentVoiceSettings.enableSounds) return;
+    
+    try {
+        // إنشاء نغمة بسيطة
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
         
-        // Ctrl+Shift+S لإظهار إعدادات الصوت
-        if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // تحديد التردد حسب نوع الصوت
+        const frequencies = {
+            start: 800,
+            success: 1000,
+            error: 400,
+            end: 600
+        };
+        
+        oscillator.frequency.setValueAtTime(frequencies[soundType] || 600, audioContext.currentTime);
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(currentVoiceSettings.volume * 0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+        
+    } catch (error) {
+        console.log('لا يمكن تشغيل الصوت:', error);
+    }
+}
+
+function showVoiceToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `voice-toast ${type}`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // إظهار الإشعار
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+    
+    // إخفاء الإشعار بعد 3 ثوان
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+function showConfirmationDialog(text) {
+    return new Promise((resolve) => {
+        const confirmed = confirm(`هل تريد إدخال النص التالي؟\n\n"${text}"`);
+        resolve(confirmed);
+    });
+}
+
+// ==============================
+// إعداد مستمعي الأحداث
+// ==============================
+function setupVoiceEventListeners() {
+    // مستمع تغيير القسم لإضافة أزرار جديدة
+    document.addEventListener('click', function(e) {
+        // تأخير قصير للسماح للعناصر الجديدة بالظهور
+        setTimeout(() => {
+            const newInputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"], textarea, select');
+            newInputs.forEach(input => {
+                if (!micButtons.has(input)) {
+                    addMicButtonToField(input);
+                }
+            });
+        }, 500);
+    });
+    
+    // مستمع اختصارات لوحة المفاتيح
+    document.addEventListener('keydown', function(e) {
+        // Ctrl + Shift + V لفتح لوحة التحكم
+        if (e.ctrlKey && e.shiftKey && e.key === 'V') {
             e.preventDefault();
             showVoiceControlPanel();
         }
@@ -1278,133 +1705,50 @@ function setupVoiceKeyboardShortcuts() {
         // Escape لإيقاف التسجيل
         if (e.key === 'Escape' && isListening) {
             e.preventDefault();
-            stopVoiceInput();
+            stopListening();
         }
     });
-}
-
-// ==============================
-// إظهار إشعارات الصوت
-// ==============================
-function showVoiceToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : type === 'warning' ? '#ffc107' : '#17a2b8'};
-        color: ${type === 'warning' ? '#212529' : 'white'};
-        padding: 15px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        z-index: 10001;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        transform: translateX(100%);
-        transition: transform 0.3s ease;
-        max-width: 300px;
-        word-wrap: break-word;
-    `;
-    
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.transform = 'translateX(0)';
-    }, 100);
-    
-    setTimeout(() => {
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            if (document.body.contains(toast)) {
-                document.body.removeChild(toast);
-            }
-        }, 300);
-    }, 4000);
-}
-
-// ==============================
-// إنشاء زر عائم للتحكم الصوتي
-// ==============================
-function createFloatingVoiceButton() {
-    const floatingButton = document.createElement('div');
-    floatingButton.id = 'floating-voice-btn';
-    floatingButton.innerHTML = '🎤';
-    floatingButton.setAttribute('title', 'إعدادات الصوت (Ctrl+Shift+S)');
-    
-    floatingButton.style.cssText = `
-        position: fixed;
-        bottom: 80px;
-        left: 20px;
-        width: 56px;
-        height: 56px;
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 24px;
-        cursor: pointer;
-        box-shadow: 0 8px 25px rgba(231, 76, 60, 0.3);
-        z-index: 1001;
-        transition: all 0.3s ease;
-    `;
-    
-    floatingButton.addEventListener('click', showVoiceControlPanel);
-    
-    floatingButton.addEventListener('mouseenter', function() {
-        this.style.transform = 'scale(1.1)';
-        this.style.boxShadow = '0 12px 35px rgba(231, 76, 60, 0.4)';
-    });
-    
-    floatingButton.addEventListener('mouseleave', function() {
-        this.style.transform = 'scale(1)';
-        this.style.boxShadow = '0 8px 25px rgba(231, 76, 60, 0.3)';
-    });
-    
-    document.body.appendChild(floatingButton);
 }
 
 // ==============================
 // تهيئة النظام عند تحميل الصفحة
 // ==============================
 document.addEventListener('DOMContentLoaded', function() {
+    // تأخير التهيئة للتأكد من تحميل الملف الرئيسي
     setTimeout(() => {
         initializeVoiceSystem();
-        createFloatingVoiceButton();
-    }, 1000);
+    }, 1500);
 });
 
 // ==============================
 // إتاحة الوظائف عالمياً
 // ==============================
 window.voiceInputSystem = {
-    start: startVoiceInput,
-    stop: stopVoiceInput,
-    showSettings: showVoiceControlPanel,
-    hideSettings: closeVoiceControlPanel,
-    test: testVoiceInput,
+    show: showVoiceControlPanel,
+    hide: closeVoiceControlPanel,
+    test: testVoiceSystem,
+    start: (inputElement) => {
+        if (inputElement) {
+            const micButton = micButtons.get(inputElement);
+            if (micButton) {
+                handleMicButtonClick(inputElement, micButton);
+            }
+        }
+    },
+    stop: stopListening,
     settings: currentVoiceSettings,
-    isListening: () => isListening,
-    addToField: addMicrophoneToField
+    isListening: () => isListening
 };
 
 // ==============================
-// معلومات التشخيص
+// معالج الأخطاء
 // ==============================
-window.voiceDebug = function() {
-    return {
-        isInitialized: isInitialized,
-        isListening: isListening,
-        currentField: currentField ? currentField.id || currentField.tagName : null,
-        micButtonsCount: micButtons.length,
-        settings: currentVoiceSettings,
-        browserSupport: checkBrowserSupport(),
-        recognition: !!recognition
-    };
-};
+window.addEventListener('error', function(e) {
+    if (e.filename && e.filename.includes('voice-input')) {
+        console.error('خطأ في نظام الإدخال الصوتي:', e.error);
+    }
+});
 
 console.log('🎤 تم تحميل نظام الإدخال الصوتي بنجاح!');
-console.log('💡 استخدم voiceInputSystem للتحكم أو voiceDebug() للتشخيص');
-console.log('⌨️ اختصارات: Ctrl+Shift+V (تسجيل صوتي) | Ctrl+Shift+S (الإعدادات) | Escape (إيقاف)');
+console.log('💡 استخدم Ctrl+Shift+V لفتح لوحة التحكم');
+console.log('🔊 استخدم voiceInputSystem للتحكم البرمجي');
