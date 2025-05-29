@@ -1,18 +1,19 @@
 /**
- * نظام إدارة المرفقات والوثائق المحسن - إصدار مُصحح
- * حل مشاكل التخزين المحلي وتحسين إدارة الذاكرة
+ * نظام إدارة المرفقات والوثائق المحسن والمتكامل
+ * إصدار محسن مع حل مشاكل التخزين والتكامل مع النظام الرئيسي
+ * يدعم الصور، PDF، Word، Excel مع حفظ دائم وربط بالحالات
  * 
- * الاستخدام: استبدل الملف السابق بهذا الملف المحسن
- * <script src="attachments-manager-fixed.js"></script>
+ * الاستخدام: قم بتضمين هذا الملف في HTML الخاص بك
+ * <script src="attachments-manager.js"></script>
  */
 
 // ==============================
-// إعدادات النظام المحسنة
+// إعدادات نظام المرفقات المحسنة
 // ==============================
 const DEFAULT_ATTACHMENT_SETTINGS = {
     // إعدادات الرفع
-    maxFileSize: 5 * 1024 * 1024, // تقليل إلى 5 MB لتجنب مشاكل التخزين
-    maxFilesPerCase: 15, // تقليل عدد الملفات
+    maxFileSize: 5 * 1024 * 1024, // 5 MB (مخفض لتحسين الأداء)
+    maxFilesPerCase: 15, // مخفض لتحسين الأداء
     allowedFileTypes: [
         'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
         'application/pdf',
@@ -22,832 +23,332 @@ const DEFAULT_ATTACHMENT_SETTINGS = {
     
     // إعدادات الضغط المحسنة
     compressImages: true,
-    imageQuality: 0.6, // جودة أقل لتوفير مساحة أكبر
-    maxImageWidth: 1280, // تقليل الأبعاد
-    maxImageHeight: 720,
+    imageQuality: 0.7, // مخفض لتوفير المساحة
+    maxImageWidth: 1200, // مخفض لتحسين الأداء
+    maxImageHeight: 800,
     
     // إعدادات التخزين المحسنة
-    useChunkedStorage: true, // تقسيم البيانات الكبيرة
-    chunkSize: 500 * 1024, // 500 KB لكل جزء
-    compressionLevel: 'high', // ضغط عالي
-    autoCleanup: true, // تنظيف تلقائي
-    maxStorageSize: 50 * 1024 * 1024, // 50 MB حد أقصى للتخزين
-    
-    // إعدادات الأداء
-    enableBatchProcessing: true,
-    enableLazyLoading: true,
-    enableMemoryOptimization: true,
+    useIndexedDB: true, // استخدام IndexedDB بدلاً من localStorage
+    autoSave: true,
+    saveInterval: 5000, // حفظ كل 5 ثوان
     
     // إعدادات الواجهة
-    showAttachmentButton: true,
-    buttonPosition: 'top',
-    compactMode: false,
-    darkMode: false
+    showInSidebar: true,
+    sidebarPosition: 'bottom',
+    showThumbnails: true,
+    compactMode: true
 };
 
 // ==============================
 // متغيرات النظام المحسنة
 // ==============================
 let currentAttachmentSettings = { ...DEFAULT_ATTACHMENT_SETTINGS };
-let attachmentsData = new Map();
-let lightweightDatabase = new Map(); // قاعدة بيانات خفيفة للفهرسة
-let attachmentManager = null;
-let currentCaseId = null;
-
-// إحصائيات التخزين
-let storageStats = {
-    totalSize: 0,
-    fileCount: 0,
-    lastCleanup: Date.now(),
-    compressionRatio: 0
+let attachmentDatabase = {
+    db: null, // IndexedDB instance
+    version: 1,
+    stores: {
+        files: 'files',
+        metadata: 'metadata',
+        thumbnails: 'thumbnails',
+        cases: 'cases'
+    }
 };
 
-// معرفات الملفات المُحملة حالياً في الذاكرة
-let loadedFiles = new Set();
+let attachmentsCache = new Map(); // كاش للوصول السريع
+let currentCaseData = null; // بيانات الحالة الحالية
+let sidebarAttachmentIcon = null;
+let attachmentManager = null;
+let isInitialized = false;
+
+// مفاتيح التخزين المحسنة
+const STORAGE_KEYS = {
+    SETTINGS: 'charity_attachment_settings_v2',
+    BACKUP: 'charity_attachment_backup_v2',
+    CACHE: 'charity_attachment_cache_v2'
+};
 
 // ==============================
-// مكتبة الضغط والتحسين
+// تهيئة النظام المحسنة
 // ==============================
-class CompressionUtility {
-    // ضغط النصوص باستخدام خوارزمية بسيطة
-    static compressString(str) {
-        try {
-            return btoa(unescape(encodeURIComponent(str)));
-        } catch (error) {
-            console.warn('فشل في ضغط النص:', error);
-            return str;
-        }
-    }
+async function initializeAttachmentSystem() {
+    if (isInitialized) return;
     
-    static decompressString(compressed) {
-        try {
-            return decodeURIComponent(escape(atob(compressed)));
-        } catch (error) {
-            console.warn('فشل في إلغاء ضغط النص:', error);
-            return compressed;
-        }
-    }
-    
-    // تقسيم البيانات الكبيرة
-    static chunkData(data, chunkSize = 500 * 1024) {
-        const chunks = [];
-        const dataString = typeof data === 'string' ? data : JSON.stringify(data);
-        
-        for (let i = 0; i < dataString.length; i += chunkSize) {
-            chunks.push(dataString.slice(i, i + chunkSize));
-        }
-        
-        return {
-            chunks: chunks,
-            totalChunks: chunks.length,
-            originalSize: dataString.length
-        };
-    }
-    
-    static reconstructData(chunkedData) {
-        return chunkedData.chunks.join('');
-    }
-}
-
-// ==============================
-// مدير التخزين المحسن
-// ==============================
-class StorageManager {
-    static async checkStorageQuota() {
-        try {
-            if ('storage' in navigator && 'estimate' in navigator.storage) {
-                const estimate = await navigator.storage.estimate();
-                const usage = estimate.usage || 0;
-                const quota = estimate.quota || 0;
-                const percentUsed = quota > 0 ? (usage / quota) * 100 : 0;
-                
-                console.log(`💾 التخزين: ${this.formatBytes(usage)} / ${this.formatBytes(quota)} (${percentUsed.toFixed(1)}%)`);
-                
-                return {
-                    usage,
-                    quota,
-                    percentUsed,
-                    available: quota - usage,
-                    canStore: percentUsed < 90
-                };
-            }
-        } catch (error) {
-            console.warn('لا يمكن فحص مساحة التخزين:', error);
-        }
-        
-        return {
-            usage: 0,
-            quota: 0,
-            percentUsed: 0,
-            available: 0,
-            canStore: true
-        };
-    }
-    
-    static formatBytes(bytes) {
-        if (bytes === 0) return '0 بايت';
-        const k = 1024;
-        const sizes = ['بايت', 'كيلوبايت', 'ميجابايت', 'جيجابايت'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-    
-    static async saveWithRetry(key, data, maxRetries = 3) {
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                const processedData = await this.preprocessData(data);
-                
-                if (currentAttachmentSettings.useChunkedStorage && processedData.length > currentAttachmentSettings.chunkSize) {
-                    return await this.saveChunked(key, processedData);
-                } else {
-                    localStorage.setItem(key, processedData);
-                    return true;
-                }
-                
-            } catch (error) {
-                console.warn(`محاولة ${attempt} فشلت:`, error.message);
-                
-                if (error.name === 'QuotaExceededError') {
-                    if (attempt < maxRetries) {
-                        await this.freeUpSpace();
-                        continue;
-                    } else {
-                        throw new Error('مساحة التخزين ممتلئة - يرجى حذف بعض الملفات');
-                    }
-                } else {
-                    throw error;
-                }
-            }
-        }
-        return false;
-    }
-    
-    static async preprocessData(data) {
-        try {
-            let jsonString = JSON.stringify(data);
-            
-            // ضغط البيانات
-            if (currentAttachmentSettings.compressionLevel === 'high') {
-                jsonString = CompressionUtility.compressString(jsonString);
-            }
-            
-            return jsonString;
-        } catch (error) {
-            console.error('خطأ في معالجة البيانات:', error);
-            throw new Error('فشل في معالجة البيانات للحفظ');
-        }
-    }
-    
-    static async saveChunked(key, data) {
-        try {
-            const chunkedData = CompressionUtility.chunkData(data, currentAttachmentSettings.chunkSize);
-            
-            // حفظ معلومات التقسيم
-            const chunkInfo = {
-                totalChunks: chunkedData.totalChunks,
-                originalSize: chunkedData.originalSize,
-                timestamp: Date.now()
-            };
-            
-            localStorage.setItem(`${key}_info`, JSON.stringify(chunkInfo));
-            
-            // حفظ كل جزء
-            for (let i = 0; i < chunkedData.chunks.length; i++) {
-                localStorage.setItem(`${key}_chunk_${i}`, chunkedData.chunks[i]);
-            }
-            
-            console.log(`✅ تم حفظ البيانات في ${chunkedData.totalChunks} أجزاء`);
-            return true;
-            
-        } catch (error) {
-            console.error('فشل في الحفظ المقسم:', error);
-            throw error;
-        }
-    }
-    
-    static async loadChunked(key) {
-        try {
-            const chunkInfoStr = localStorage.getItem(`${key}_info`);
-            if (!chunkInfoStr) return null;
-            
-            const chunkInfo = JSON.parse(chunkInfoStr);
-            const chunks = [];
-            
-            // تحميل جميع الأجزاء
-            for (let i = 0; i < chunkInfo.totalChunks; i++) {
-                const chunk = localStorage.getItem(`${key}_chunk_${i}`);
-                if (!chunk) {
-                    console.error(`الجزء ${i} مفقود`);
-                    return null;
-                }
-                chunks.push(chunk);
-            }
-            
-            // إعادة تجميع البيانات
-            const reconstructedData = CompressionUtility.reconstructData({ chunks });
-            
-            // إلغاء الضغط إذا لزم الأمر
-            let finalData = reconstructedData;
-            if (currentAttachmentSettings.compressionLevel === 'high') {
-                finalData = CompressionUtility.decompressString(reconstructedData);
-            }
-            
-            return JSON.parse(finalData);
-            
-        } catch (error) {
-            console.error('فشل في تحميل البيانات المقسمة:', error);
-            return null;
-        }
-    }
-    
-    static async freeUpSpace(targetSize = 10 * 1024 * 1024) { // 10 MB
-        console.log('🧹 بدء تنظيف مساحة التخزين...');
-        
-        let freedSpace = 0;
-        const keysToRemove = [];
-        
-        // العثور على الملفات القديمة للحذف
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            
-            if (key && key.startsWith('temp_') || key.startsWith('cache_')) {
-                keysToRemove.push(key);
-            }
-        }
-        
-        // حذف الملفات المؤقتة
-        for (const key of keysToRemove) {
-            const item = localStorage.getItem(key);
-            if (item) {
-                freedSpace += item.length * 2; // تقدير تقريبي
-                localStorage.removeItem(key);
-            }
-        }
-        
-        // تنظيف الملفات القديمة من المرفقات
-        if (freedSpace < targetSize) {
-            await this.cleanupOldAttachments();
-        }
-        
-        console.log(`✅ تم تحرير ${this.formatBytes(freedSpace)} تقريباً`);
-        return freedSpace;
-    }
-    
-    static async cleanupOldAttachments() {
-        try {
-            const attachmentData = await this.loadChunked('charity_attachments_v2');
-            if (!attachmentData || !attachmentData.metadata) return;
-            
-            const now = Date.now();
-            const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
-            
-            let cleanedCount = 0;
-            const metadataMap = new Map(Object.entries(attachmentData.metadata));
-            
-            for (const [fileId, metadata] of metadataMap) {
-                const fileDate = new Date(metadata.uploadDate).getTime();
-                
-                if (fileDate < thirtyDaysAgo && metadata.size > 1024 * 1024) { // ملفات أكبر من 1 MB وأقدم من 30 يوم
-                    delete attachmentData.files[fileId];
-                    delete attachmentData.metadata[fileId];
-                    delete attachmentData.thumbnails[fileId];
-                    cleanedCount++;
-                    
-                    if (cleanedCount >= 5) break; // حذف 5 ملفات كحد أقصى
-                }
-            }
-            
-            if (cleanedCount > 0) {
-                await this.saveWithRetry('charity_attachments_v2', attachmentData);
-                console.log(`🗑️ تم حذف ${cleanedCount} ملف قديم`);
-            }
-            
-        } catch (error) {
-            console.warn('تعذر تنظيف الملفات القديمة:', error);
-        }
-    }
-}
-
-// ==============================
-// معالج الملفات المحسن
-// ==============================
-class FileProcessor {
-    static async processFileOptimized(file) {
-        try {
-            let processedFile = {
-                id: this.generateFileId(),
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                lastModified: file.lastModified,
-                uploadDate: new Date().toISOString(),
-                category: this.getFileCategory(file.type),
-                compressed: false
-            };
-            
-            // معالجة خاصة للصور
-            if (processedFile.category === 'images') {
-                const compressedResult = await this.compressImageOptimized(file);
-                if (compressedResult.success) {
-                    processedFile.data = compressedResult.data;
-                    processedFile.size = compressedResult.size;
-                    processedFile.compressed = true;
-                    processedFile.originalSize = file.size;
-                    processedFile.compressionRatio = (file.size - compressedResult.size) / file.size;
-                } else {
-                    processedFile.data = await this.fileToBase64(file);
-                }
-            } else {
-                // للملفات الأخرى، تحقق من الحجم
-                if (file.size > 1024 * 1024) { // أكبر من 1 MB
-                    throw new Error(`الملف كبير جداً (${StorageManager.formatBytes(file.size)}). الحد الأقصى ${StorageManager.formatBytes(currentAttachmentSettings.maxFileSize)}`);
-                }
-                processedFile.data = await this.fileToBase64(file);
-            }
-            
-            // إنشاء معاينة خفيفة
-            if (currentAttachmentSettings.enableLazyLoading) {
-                processedFile.thumbnail = await this.generateLightweightThumbnail(processedFile);
-            }
-            
-            return processedFile;
-            
-        } catch (error) {
-            console.error('خطأ في معالجة الملف:', error);
-            throw error;
-        }
-    }
-    
-    static async compressImageOptimized(file) {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            
-            img.onload = function() {
-                try {
-                    // حساب الأبعاد الجديدة
-                    const maxWidth = currentAttachmentSettings.maxImageWidth;
-                    const maxHeight = currentAttachmentSettings.maxImageHeight;
-                    
-                    let { width, height } = FileProcessor.calculateOptimalDimensions(
-                        img.width, img.height, maxWidth, maxHeight
-                    );
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    
-                    // تحسين جودة الرسم
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'high';
-                    
-                    // رسم الصورة
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // تحويل إلى Base64 مع ضغط
-                    const compressedDataUrl = canvas.toDataURL('image/jpeg', currentAttachmentSettings.imageQuality);
-                    
-                    // حساب حجم البيانات المضغوطة
-                    const compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
-                    
-                    resolve({
-                        success: true,
-                        data: compressedDataUrl,
-                        size: compressedSize,
-                        dimensions: { width, height }
-                    });
-                    
-                } catch (error) {
-                    console.error('فشل في ضغط الصورة:', error);
-                    resolve({ success: false, error: error.message });
-                }
-            };
-            
-            img.onerror = function() {
-                resolve({ success: false, error: 'فشل في تحميل الصورة' });
-            };
-            
-            img.src = URL.createObjectURL(file);
-        });
-    }
-    
-    static calculateOptimalDimensions(originalWidth, originalHeight, maxWidth, maxHeight) {
-        let width = originalWidth;
-        let height = originalHeight;
-        
-        // تقليل إضافي إذا كانت الصورة كبيرة جداً
-        if (width > 2000 || height > 2000) {
-            const scale = Math.min(1000 / width, 1000 / height);
-            width *= scale;
-            height *= scale;
-        }
-        
-        // تطبيق الحد الأقصى
-        if (width > maxWidth || height > maxHeight) {
-            const aspectRatio = width / height;
-            
-            if (width > height) {
-                width = Math.min(width, maxWidth);
-                height = width / aspectRatio;
-            } else {
-                height = Math.min(height, maxHeight);
-                width = height * aspectRatio;
-            }
-        }
-        
-        return { 
-            width: Math.round(width), 
-            height: Math.round(height) 
-        };
-    }
-    
-    static async generateLightweightThumbnail(fileObj) {
-        if (fileObj.category !== 'images') {
-            return this.generateIconThumbnail(fileObj);
-        }
-        
-        try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const img = new Image();
-            
-            return new Promise((resolve) => {
-                img.onload = function() {
-                    const size = 64; // معاينة صغيرة جداً
-                    canvas.width = size;
-                    canvas.height = size;
-                    
-                    const aspectRatio = img.width / img.height;
-                    let drawWidth = size;
-                    let drawHeight = size;
-                    let drawX = 0;
-                    let drawY = 0;
-                    
-                    if (aspectRatio > 1) {
-                        drawHeight = size / aspectRatio;
-                        drawY = (size - drawHeight) / 2;
-                    } else {
-                        drawWidth = size * aspectRatio;
-                        drawX = (size - drawWidth) / 2;
-                    }
-                    
-                    ctx.fillStyle = '#f8f9fa';
-                    ctx.fillRect(0, 0, size, size);
-                    ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-                    
-                    resolve(canvas.toDataURL('image/jpeg', 0.4));
-                };
-                
-                img.onerror = function() {
-                    resolve(FileProcessor.generateIconThumbnail(fileObj));
-                };
-                
-                if (fileObj.data) {
-                    img.src = fileObj.data;
-                } else {
-                    resolve(FileProcessor.generateIconThumbnail(fileObj));
-                }
-            });
-            
-        } catch (error) {
-            return this.generateIconThumbnail(fileObj);
-        }
-    }
-    
-    static generateIconThumbnail(fileObj) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const size = 64;
-        
-        canvas.width = size;
-        canvas.height = size;
-        
-        const colors = {
-            'images': '#e74c3c',
-            'documents': '#3498db',
-            'word': '#2980b9',
-            'excel': '#27ae60',
-            'text': '#95a5a6',
-            'other': '#95a5a6'
-        };
-        
-        const icons = {
-            'images': '🖼️',
-            'documents': '📄',
-            'word': '📝',
-            'excel': '📊',
-            'text': '📃',
-            'other': '📁'
-        };
-        
-        ctx.fillStyle = colors[fileObj.category] || colors.other;
-        ctx.fillRect(0, 0, size, size);
-        
-        ctx.font = '24px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'white';
-        ctx.fillText(icons[fileObj.category] || icons.other, size/2, size/2);
-        
-        return canvas.toDataURL('image/jpeg', 0.8);
-    }
-    
-    static generateFileId() {
-        return 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-    }
-    
-    static getFileCategory(mimeType) {
-        if (mimeType.startsWith('image/')) return 'images';
-        if (mimeType === 'application/pdf') return 'documents';
-        if (mimeType.includes('word')) return 'word';
-        if (mimeType.includes('excel') || mimeType.includes('sheet')) return 'excel';
-        if (mimeType.startsWith('text/')) return 'text';
-        return 'other';
-    }
-    
-    static async fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-    }
-}
-
-// ==============================
-// تهيئة النظام المحسن
-// ==============================
-async function initializeAttachmentSystemFixed() {
     try {
         console.log('🔄 بدء تهيئة نظام المرفقات المحسن...');
         
-        // فحص مساحة التخزين
-        const storageInfo = await StorageManager.checkStorageQuota();
-        if (!storageInfo.canStore) {
-            showAttachmentToast('⚠️ مساحة التخزين تقترب من الامتلاء. قد تحتاج لحذف بعض الملفات.', 'warning');
-        }
-        
         // تحميل الإعدادات
-        loadAttachmentSettingsFixed();
+        await loadAttachmentSettings();
         
-        // تحميل قاعدة البيانات
-        await loadAttachmentDatabaseFixed();
+        // تهيئة قاعدة البيانات
+        await initializeDatabase();
+        
+        // تحميل البيانات المحفوظة
+        await loadAttachmentsFromDB();
+        
+        // إضافة أيقونة الشريط الجانبي
+        addSidebarAttachmentIcon();
         
         // إنشاء مدير المرفقات
-        createAttachmentManagerFixed();
+        createAttachmentManager();
         
-        // إضافة أزرار المرفقات
-        addAttachmentButtonsFixed();
+        // إضافة أزرار المرفقات للنماذج
+        addAttachmentButtons();
         
-        // إعداد معالجات الأحداث
-        setupAttachmentEventListenersFixed();
+        // إعداد المستمعين
+        setupAttachmentEventListeners();
         
-        // بدء التنظيف التلقائي
-        startAutoCleanup();
+        // بدء الحفظ التلقائي
+        startAutoSave();
         
-        console.log('✅ تم تهيئة نظام المرفقات المحسن بنجاح');
-        showAttachmentToast('📎 نظام المرفقات المحسن جاهز للاستخدام', 'success');
+        // تحديث الواجهة
+        updateSidebarIcon();
+        
+        isInitialized = true;
+        console.log('✅ تم تهيئة نظام المرفقات بنجاح');
+        showAttachmentToast('📎 نظام المرفقات جاهز للاستخدام', 'success');
         
     } catch (error) {
         console.error('❌ خطأ في تهيئة نظام المرفقات:', error);
         showAttachmentToast('فشل في تهيئة نظام المرفقات: ' + error.message, 'error');
+        
+        // محاولة التهيئة بالتخزين العادي كبديل
+        await fallbackToLocalStorage();
     }
 }
 
 // ==============================
-// تحميل وحفظ البيانات المحسن
+// تهيئة قاعدة البيانات IndexedDB
 // ==============================
-async function loadAttachmentDatabaseFixed() {
-    try {
-        // محاولة تحميل الإصدار الجديد أولاً
-        let data = await StorageManager.loadChunked('charity_attachments_v2');
+async function initializeDatabase() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('CharityAttachmentsDB', attachmentDatabase.version);
         
-        // إذا لم يوجد، جرب الإصدار القديم
-        if (!data) {
-            const oldData = localStorage.getItem('charity_attachments');
-            if (oldData) {
-                console.log('📦 تحويل البيانات من الإصدار القديم...');
-                data = JSON.parse(oldData);
-                
-                // حفظ بالتنسيق الجديد
-                await saveAttachmentDatabaseFixed();
-                
-                // حذف البيانات القديمة
-                localStorage.removeItem('charity_attachments');
-            }
-        }
-        
-        if (data) {
-            // تحويل البيانات إلى الشكل المطلوب
-            if (data.attachments) {
-                attachmentsData = new Map(Object.entries(data.attachments));
-            }
-            
-            // بناء قاعدة البيانات الخفيفة للفهرسة
-            if (data.metadata) {
-                lightweightDatabase.clear();
-                for (const [fileId, metadata] of Object.entries(data.metadata)) {
-                    lightweightDatabase.set(fileId, {
-                        id: fileId,
-                        name: metadata.name,
-                        size: metadata.size,
-                        type: metadata.type,
-                        category: metadata.category,
-                        uploadDate: metadata.uploadDate,
-                        caseId: metadata.caseId
-                    });
-                }
-                
-                storageStats.fileCount = lightweightDatabase.size;
-                console.log(`📁 تم تحميل ${storageStats.fileCount} ملف`);
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ خطأ في تحميل قاعدة بيانات المرفقات:', error);
-        showAttachmentToast('تعذر تحميل المرفقات المحفوظة', 'warning');
-    }
-}
-
-async function saveAttachmentDatabaseFixed() {
-    try {
-        const data = {
-            version: '2.0',
-            timestamp: new Date().toISOString(),
-            attachments: Object.fromEntries(attachmentsData),
-            metadata: Object.fromEntries(lightweightDatabase),
-            stats: storageStats
+        request.onerror = () => {
+            console.error('خطأ في فتح قاعدة البيانات');
+            reject(new Error('فشل في فتح قاعدة البيانات'));
         };
         
-        await StorageManager.saveWithRetry('charity_attachments_v2', data);
-        console.log('💾 تم حفظ قاعدة بيانات المرفقات بنجاح');
+        request.onsuccess = (event) => {
+            attachmentDatabase.db = event.target.result;
+            console.log('✅ تم فتح قاعدة البيانات بنجاح');
+            resolve();
+        };
         
-        return true;
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            
+            // إنشاء متاجر البيانات
+            if (!db.objectStoreNames.contains('files')) {
+                const filesStore = db.createObjectStore('files', { keyPath: 'id' });
+                filesStore.createIndex('caseId', 'caseId', { unique: false });
+                filesStore.createIndex('uploadDate', 'uploadDate', { unique: false });
+            }
+            
+            if (!db.objectStoreNames.contains('metadata')) {
+                const metadataStore = db.createObjectStore('metadata', { keyPath: 'id' });
+                metadataStore.createIndex('caseId', 'caseId', { unique: false });
+                metadataStore.createIndex('category', 'category', { unique: false });
+            }
+            
+            if (!db.objectStoreNames.contains('thumbnails')) {
+                db.createObjectStore('thumbnails', { keyPath: 'id' });
+            }
+            
+            if (!db.objectStoreNames.contains('cases')) {
+                const casesStore = db.createObjectStore('cases', { keyPath: 'caseId' });
+                casesStore.createIndex('caseType', 'caseType', { unique: false });
+            }
+            
+            console.log('✅ تم إنشاء هيكل قاعدة البيانات');
+        };
+    });
+}
+
+// ==============================
+// إضافة أيقونة الشريط الجانبي
+// ==============================
+function addSidebarAttachmentIcon() {
+    const sidebar = document.querySelector('.nav-menu');
+    if (!sidebar) {
+        setTimeout(addSidebarAttachmentIcon, 1000);
+        return;
+    }
+    
+    // إنشاء قسم المرفقات
+    const attachmentSection = document.createElement('div');
+    attachmentSection.className = 'nav-section';
+    attachmentSection.innerHTML = `
+        <div class="nav-section-title">المرفقات والوثائق</div>
+        <div class="nav-item attachment-nav-item" onclick="openAttachmentGallery()" role="button" tabindex="0">
+            <i class="fas fa-images"></i>
+            <span>معرض المرفقات</span>
+            <span class="badge" id="total-attachments-count">0</span>
+        </div>
+        <div class="nav-item" onclick="openAttachmentsByType('سيد')" role="button" tabindex="0">
+            <i class="fas fa-hand-holding-heart"></i>
+            <span>مرفقات السيد</span>
+            <span class="badge" id="sayed-attachments-count">0</span>
+        </div>
+        <div class="nav-item" onclick="openAttachmentsByType('مصاريف')" role="button" tabindex="0">
+            <i class="fas fa-receipt"></i>
+            <span>مرفقات المصاريف</span>
+            <span class="badge" id="expenses-attachments-count">0</span>
+        </div>
+        <div class="nav-item" onclick="openAttachmentsByType('عام')" role="button" tabindex="0">
+            <i class="fas fa-users"></i>
+            <span>المرفقات العامة</span>
+            <span class="badge" id="general-attachments-count">0</span>
+        </div>
+    `;
+    
+    sidebar.appendChild(attachmentSection);
+    sidebarAttachmentIcon = attachmentSection;
+}
+
+// ==============================
+// ربط الملفات بالحالات الحالية
+// ==============================
+function getCurrentCaseInfo() {
+    try {
+        // محاولة الحصول على بيانات النموذج الحالي
+        if (typeof getFormData === 'function') {
+            const formData = getFormData();
+            if (formData) {
+                return {
+                    id: formData.formNumber || 'case_' + Date.now(),
+                    type: formData.caseCode || 'عام',
+                    name: formData.fullName || 'حالة غير مسماة',
+                    section: getCurrentSection()
+                };
+            }
+        }
+        
+        // الحصول على القسم الحالي
+        const currentSection = getCurrentSection();
+        let caseType = 'عام';
+        
+        if (currentSection.includes('sayed')) caseType = 'سيد';
+        else if (currentSection.includes('expenses')) caseType = 'مصاريف';
+        
+        return {
+            id: 'current_case_' + Date.now(),
+            type: caseType,
+            name: 'الحالة الحالية',
+            section: currentSection
+        };
         
     } catch (error) {
-        console.error('❌ خطأ في حفظ المرفقات:', error);
-        
-        if (error.message.includes('مساحة التخزين ممتلئة')) {
-            showAttachmentToast('مساحة التخزين ممتلئة. يرجى حذف بعض الملفات القديمة.', 'error');
-        } else {
-            showAttachmentToast('فشل في حفظ البيانات: ' + error.message, 'error');
-        }
-        
-        return false;
+        console.error('خطأ في الحصول على معلومات الحالة:', error);
+        return {
+            id: 'default_case',
+            type: 'عام',
+            name: 'حالة افتراضية',
+            section: 'unknown'
+        };
     }
 }
 
-// ==============================
-// معالجة رفع الملفات المحسنة
-// ==============================
-async function handleFileUploadFixed(files) {
-    if (!files || files.length === 0) return;
-    
-    if (!currentCaseId) {
-        showAttachmentToast('يرجى تحديد حالة أولاً', 'warning');
-        return;
-    }
-    
-    // فحص مساحة التخزين قبل البدء
-    const storageInfo = await StorageManager.checkStorageQuota();
-    if (!storageInfo.canStore) {
-        showAttachmentToast('مساحة التخزين ممتلئة. يرجى حذف بعض الملفات أولاً.', 'error');
-        return;
-    }
-    
-    showUploadProgressFixed();
-    
-    let uploadedCount = 0;
-    let failedCount = 0;
-    let totalFiles = files.length;
-    
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        try {
-            updateUploadProgressFixed(((i) / totalFiles) * 50, `جاري معالجة ${file.name}...`);
-            
-            // التحقق من صحة الملف
-            if (!validateFileFixed(file)) {
-                failedCount++;
-                continue;
-            }
-            
-            // معالجة الملف
-            const processedFile = await FileProcessor.processFileOptimized(file);
-            
-            updateUploadProgressFixed(((i) / totalFiles) * 80, `جاري حفظ ${file.name}...`);
-            
-            // حفظ الملف
-            const saved = await saveFileFixed(processedFile, currentCaseId);
-            
-            if (saved) {
-                uploadedCount++;
-                updateUploadProgressFixed(((i + 1) / totalFiles) * 100, `تم رفع ${uploadedCount} من ${totalFiles} ملف`);
-            } else {
-                failedCount++;
-            }
-            
-        } catch (error) {
-            console.error('خطأ في رفع الملف:', file.name, error);
-            failedCount++;
-            showAttachmentToast(`فشل في رفع ${file.name}: ${error.message}`, 'error');
-        }
-    }
-    
-    hideUploadProgressFixed();
-    
-    // إظهار النتائج
-    if (uploadedCount > 0) {
-        showAttachmentToast(`✅ تم رفع ${uploadedCount} ملف بنجاح`, 'success');
-        refreshAttachmentListFixed();
-        updateAttachmentStatsFixed();
-    }
-    
-    if (failedCount > 0) {
-        showAttachmentToast(`⚠️ فشل في رفع ${failedCount} ملف`, 'warning');
-    }
-}
-
-function validateFileFixed(file) {
-    // التحقق من الحجم
-    if (file.size > currentAttachmentSettings.maxFileSize) {
-        showAttachmentToast(`❌ الملف "${file.name}" كبير جداً (${StorageManager.formatBytes(file.size)}). الحد الأقصى ${StorageManager.formatBytes(currentAttachmentSettings.maxFileSize)}`, 'error');
-        return false;
-    }
-    
-    // التحقق من النوع
-    if (!currentAttachmentSettings.allowedFileTypes.includes(file.type)) {
-        showAttachmentToast(`❌ نوع الملف "${file.name}" غير مدعوم`, 'error');
-        return false;
-    }
-    
-    // التحقق من عدد الملفات
-    const currentFiles = attachmentsData.get(currentCaseId) || [];
-    if (currentFiles.length >= currentAttachmentSettings.maxFilesPerCase) {
-        showAttachmentToast(`❌ تم الوصول للحد الأقصى من الملفات (${currentAttachmentSettings.maxFilesPerCase})`, 'error');
-        return false;
-    }
-    
-    return true;
-}
-
-async function saveFileFixed(fileObj, caseId) {
+function getCurrentSection() {
     try {
-        // حفظ في قاعدة البيانات الخفيفة
-        lightweightDatabase.set(fileObj.id, {
-            id: fileObj.id,
-            name: fileObj.name,
-            size: fileObj.size,
-            type: fileObj.type,
-            category: fileObj.category,
-            uploadDate: fileObj.uploadDate,
-            caseId: caseId,
-            compressed: fileObj.compressed || false,
-            thumbnail: fileObj.thumbnail
+        if (typeof currentSection !== 'undefined') {
+            return currentSection;
+        }
+        
+        const activeSection = document.querySelector('.content-section.active');
+        if (activeSection) {
+            return activeSection.id.replace('-section', '');
+        }
+        
+        return 'dashboard';
+    } catch (error) {
+        return 'dashboard';
+    }
+}
+
+// ==============================
+// حفظ الملفات في قاعدة البيانات المحسن
+// ==============================
+async function saveFileToDatabase(fileData) {
+    try {
+        if (!attachmentDatabase.db) {
+            throw new Error('قاعدة البيانات غير متاحة');
+        }
+        
+        const transaction = attachmentDatabase.db.transaction(['files', 'metadata', 'thumbnails', 'cases'], 'readwrite');
+        
+        // حفظ الملف
+        const filesStore = transaction.objectStore('files');
+        await new Promise((resolve, reject) => {
+            const request = filesStore.put({
+                id: fileData.id,
+                data: fileData.data,
+                size: fileData.size,
+                originalSize: fileData.originalSize || fileData.size
+            });
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
         });
         
-        // إضافة إلى قائمة مرفقات الحالة
-        if (!attachmentsData.has(caseId)) {
-            attachmentsData.set(caseId, []);
-        }
-        attachmentsData.get(caseId).push(fileObj.id);
-        
-        // حفظ البيانات الكاملة للملف بشكل منفصل
-        const fileKey = `file_data_${fileObj.id}`;
-        await StorageManager.saveWithRetry(fileKey, {
-            id: fileObj.id,
-            data: fileObj.data,
-            thumbnail: fileObj.thumbnail
+        // حفظ البيانات الوصفية
+        const metadataStore = transaction.objectStore('metadata');
+        await new Promise((resolve, reject) => {
+            const request = metadataStore.put({
+                id: fileData.id,
+                caseId: fileData.caseId,
+                name: fileData.name,
+                type: fileData.type,
+                category: fileData.category,
+                uploadDate: fileData.uploadDate,
+                size: fileData.size,
+                isCompressed: fileData.isCompressed || false,
+                description: fileData.description || '',
+                tags: fileData.tags || []
+            });
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
         });
         
-        // حفظ قاعدة البيانات المحدثة
-        const success = await saveAttachmentDatabaseFixed();
-        
-        if (success) {
-            // تحديث الإحصائيات
-            storageStats.fileCount++;
-            storageStats.totalSize += fileObj.size;
-            
-            if (fileObj.compressed) {
-                storageStats.compressionRatio = ((fileObj.originalSize - fileObj.size) / fileObj.originalSize);
-            }
-            
-            console.log('✅ تم حفظ الملف:', fileObj.name);
-            return true;
-        } else {
-            // حذف البيانات المؤقتة في حالة فشل الحفظ
-            lightweightDatabase.delete(fileObj.id);
-            const caseFiles = attachmentsData.get(caseId);
-            if (caseFiles) {
-                const index = caseFiles.indexOf(fileObj.id);
-                if (index > -1) caseFiles.splice(index, 1);
-            }
-            localStorage.removeItem(fileKey);
-            
-            return false;
+        // حفظ المعاينة المصغرة
+        if (fileData.thumbnail) {
+            const thumbnailsStore = transaction.objectStore('thumbnails');
+            await new Promise((resolve, reject) => {
+                const request = thumbnailsStore.put({
+                    id: fileData.id,
+                    thumbnail: fileData.thumbnail
+                });
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
         }
+        
+        // تحديث معلومات الحالة
+        const casesStore = transaction.objectStore('cases');
+        const caseInfo = await getCaseFromDB(fileData.caseId) || {
+            caseId: fileData.caseId,
+            caseType: fileData.caseType || 'عام',
+            caseName: fileData.caseName || 'حالة',
+            files: [],
+            totalSize: 0,
+            lastUpdate: new Date().toISOString()
+        };
+        
+        if (!caseInfo.files.includes(fileData.id)) {
+            caseInfo.files.push(fileData.id);
+        }
+        caseInfo.totalSize = (caseInfo.totalSize || 0) + fileData.size;
+        caseInfo.lastUpdate = new Date().toISOString();
+        
+        await new Promise((resolve, reject) => {
+            const request = casesStore.put(caseInfo);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+        
+        // تحديث الكاش
+        attachmentsCache.set(fileData.id, fileData);
+        
+        console.log('✅ تم حفظ الملف في قاعدة البيانات:', fileData.name);
+        return true;
         
     } catch (error) {
         console.error('❌ خطأ في حفظ الملف:', error);
@@ -856,281 +357,453 @@ async function saveFileFixed(fileObj, caseId) {
 }
 
 // ==============================
-// واجهة المستخدم المحسنة
+// تحميل الملفات من قاعدة البيانات
 // ==============================
-function createAttachmentManagerFixed() {
-    // إزالة المدير القديم إن وجد
-    if (attachmentManager) {
-        attachmentManager.remove();
-    }
-    
-    const manager = document.createElement('div');
-    manager.id = 'attachment-manager-fixed';
-    manager.innerHTML = `
-        <div class="attachment-overlay">
-            <div class="attachment-container">
-                <div class="attachment-header">
-                    <div class="attachment-title">
-                        <h3>📎 إدارة المرفقات المحسنة</h3>
-                        <span class="case-info" id="current-case-info">لم يتم تحديد حالة</span>
-                        <div class="storage-info" id="storage-info">جاري تحميل معلومات التخزين...</div>
-                    </div>
-                    <div class="attachment-actions">
-                        <button class="attachment-btn upload-btn" onclick="triggerFileUploadFixed()">
-                            <i class="fas fa-upload"></i> رفع ملفات
-                        </button>
-                        <button class="attachment-btn cleanup-btn" onclick="cleanupStorageFixed()">
-                            <i class="fas fa-broom"></i> تنظيف
-                        </button>
-                        <button class="attachment-btn close-btn" onclick="closeAttachmentManagerFixed()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="attachment-toolbar">
-                    <div class="attachment-search">
-                        <input type="text" id="attachment-search-fixed" placeholder="البحث في المرفقات..." onkeyup="searchAttachmentsFixed()">
-                        <i class="fas fa-search"></i>
-                    </div>
-                    <div class="attachment-filters">
-                        <select id="attachment-filter-type-fixed" onchange="filterAttachmentsFixed()">
-                            <option value="all">جميع الأنواع</option>
-                            <option value="images">الصور</option>
-                            <option value="documents">المستندات</option>
-                            <option value="word">وورد</option>
-                            <option value="excel">اكسل</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="attachment-content">
-                    <div class="attachment-dropzone" id="attachment-dropzone-fixed">
-                        <div class="dropzone-content">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <h4>اسحب وأفلت الملفات هنا</h4>
-                            <p>أو <button class="upload-link" onclick="triggerFileUploadFixed()">اختر الملفات</button></p>
-                            <div class="upload-info">
-                                <small>الحد الأقصى: ${StorageManager.formatBytes(currentAttachmentSettings.maxFileSize)} لكل ملف</small>
-                                <small>الأنواع المدعومة: الصور، PDF، Word، النصوص</small>
-                                <small>ضغط تلقائي للصور لتوفير المساحة</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="attachment-list" id="attachment-list-fixed">
-                        <!-- المرفقات ستظهر هنا -->
-                    </div>
-                </div>
-                
-                <div class="attachment-footer">
-                    <div class="attachment-stats" id="attachment-stats-fixed">
-                        <span>0 ملفات</span>
-                        <span>0 بايت</span>
-                    </div>
-                    <div class="compression-info" id="compression-info">
-                        <small>نسبة الضغط: 0%</small>
-                    </div>
-                </div>
-            </div>
-        </div>
+async function loadAttachmentsFromDB() {
+    try {
+        if (!attachmentDatabase.db) return;
         
-        <!-- حقل رفع الملفات المخفي -->
-        <input type="file" id="attachment-file-input-fixed" multiple accept="${getAcceptedFileTypesFixed()}" style="display: none;">
-    `;
-    
-    // إضافة الأنماط المحسنة
-    addAttachmentStylesFixed();
-    
-    document.body.appendChild(manager);
-    attachmentManager = manager;
-    
-    // إعداد معالج رفع الملفات
-    setupFileUploadHandlerFixed();
-    
-    // إعداد السحب والإفلات
-    setupDragAndDropFixed();
-    
-    // تحديث معلومات التخزين
-    updateStorageInfoFixed();
+        const transaction = attachmentDatabase.db.transaction(['files', 'metadata', 'thumbnails'], 'readonly');
+        
+        // تحميل جميع الملفات
+        const metadataStore = transaction.objectStore('metadata');
+        const metadataRequest = metadataStore.getAll();
+        
+        const filesData = await new Promise((resolve, reject) => {
+            metadataRequest.onsuccess = () => resolve(metadataRequest.result);
+            metadataRequest.onerror = () => reject(metadataRequest.error);
+        });
+        
+        console.log(`📁 تم تحميل ${filesData.length} ملف من قاعدة البيانات`);
+        
+        // تحديث الكاش
+        for (const file of filesData) {
+            attachmentsCache.set(file.id, file);
+        }
+        
+        return filesData;
+        
+    } catch (error) {
+        console.error('❌ خطأ في تحميل المرفقات:', error);
+        return [];
+    }
 }
 
-function addAttachmentButtonsFixed() {
-    if (!currentAttachmentSettings.showAttachmentButton) return;
+// ==============================
+// معالجة رفع الملفات المحسنة
+// ==============================
+async function handleFileUpload(files) {
+    if (!files || files.length === 0) return;
     
-    // البحث عن مناطق النماذج
-    const formSections = document.querySelectorAll('.form-container, .content-header, .case-container');
+    const caseInfo = getCurrentCaseInfo();
+    console.log('📎 رفع ملفات للحالة:', caseInfo);
     
-    formSections.forEach(section => {
-        if (!section.querySelector('.attachment-button-fixed')) {
-            addAttachmentButtonToSectionFixed(section);
+    showUploadProgress();
+    
+    let uploadedCount = 0;
+    let failedCount = 0;
+    
+    try {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            
+            try {
+                // التحقق من صحة الملف
+                if (!validateFile(file)) {
+                    failedCount++;
+                    continue;
+                }
+                
+                updateUploadProgress(((i + 0.5) / files.length) * 100, `معالجة ${file.name}...`);
+                
+                // معالجة الملف
+                const processedFile = await processFile(file, caseInfo);
+                
+                updateUploadProgress(((i + 0.8) / files.length) * 100, `حفظ ${file.name}...`);
+                
+                // حفظ الملف
+                await saveFileToDatabase(processedFile);
+                
+                uploadedCount++;
+                updateUploadProgress(((i + 1) / files.length) * 100, `تم حفظ ${file.name}`);
+                
+            } catch (error) {
+                console.error('خطأ في رفع الملف:', file.name, error);
+                failedCount++;
+            }
+        }
+        
+    } catch (error) {
+        console.error('خطأ عام في رفع الملفات:', error);
+        showAttachmentToast('حدث خطأ غير متوقع في رفع الملفات', 'error');
+    } finally {
+        hideUploadProgress();
+    }
+    
+    // إظهار النتائج
+    if (uploadedCount > 0) {
+        showAttachmentToast(`✅ تم رفع ${uploadedCount} ملف بنجاح`, 'success');
+        await refreshAllViews();
+    }
+    
+    if (failedCount > 0) {
+        showAttachmentToast(`❌ فشل في رفع ${failedCount} ملف`, 'error');
+    }
+}
+
+// ==============================
+// معالجة الملفات المحسنة
+// ==============================
+async function processFile(file, caseInfo) {
+    const fileId = generateFileId();
+    
+    let processedFile = {
+        id: fileId,
+        name: file.name,
+        size: file.size,
+        originalSize: file.size,
+        type: file.type,
+        category: getFileCategory(file.type),
+        uploadDate: new Date().toISOString(),
+        caseId: caseInfo.id,
+        caseType: caseInfo.type,
+        caseName: caseInfo.name,
+        description: '',
+        tags: [caseInfo.type, caseInfo.section],
+        isCompressed: false
+    };
+    
+    // معالجة خاصة للصور
+    if (processedFile.category === 'images' && currentAttachmentSettings.compressImages) {
+        try {
+            const compressedData = await compressImage(file);
+            processedFile.data = compressedData.data;
+            processedFile.size = compressedData.size;
+            processedFile.isCompressed = true;
+            console.log(`🗜️ تم ضغط ${file.name} من ${formatFileSize(file.size)} إلى ${formatFileSize(compressedData.size)}`);
+        } catch (error) {
+            console.error('خطأ في ضغط الصورة:', error);
+            processedFile.data = await fileToBase64(file);
+        }
+    } else {
+        processedFile.data = await fileToBase64(file);
+    }
+    
+    // إنشاء معاينة مصغرة
+    try {
+        processedFile.thumbnail = await generateThumbnail(processedFile, file);
+    } catch (error) {
+        console.error('خطأ في إنشاء المعاينة:', error);
+        processedFile.thumbnail = getDefaultThumbnail(processedFile.type);
+    }
+    
+    return processedFile;
+}
+
+// ==============================
+// ضغط الصور المحسن
+// ==============================
+async function compressImage(file) {
+    return new Promise((resolve, reject) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        img.onload = function() {
+            try {
+                // حساب الأبعاد الجديدة
+                const { width, height } = calculateNewDimensions(
+                    img.width, 
+                    img.height, 
+                    currentAttachmentSettings.maxImageWidth, 
+                    currentAttachmentSettings.maxImageHeight
+                );
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // تحسين جودة الرسم
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
+                // رسم الصورة المضغوطة
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // تحويل إلى Base64
+                const compressedDataUrl = canvas.toDataURL(file.type, currentAttachmentSettings.imageQuality);
+                
+                // حساب الحجم الجديد
+                const base64Data = compressedDataUrl.split(',')[1];
+                const newSize = Math.round(base64Data.length * 0.75); // تقدير تقريبي
+                
+                resolve({
+                    data: compressedDataUrl,
+                    size: newSize
+                });
+                
+            } catch (error) {
+                reject(error);
+            }
+        };
+        
+        img.onerror = () => reject(new Error('فشل في تحميل الصورة'));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+// ==============================
+// إنشاء المعاينات المصغرة المحسن
+// ==============================
+async function generateThumbnail(fileData, originalFile = null) {
+    const category = fileData.category;
+    
+    if (category === 'images') {
+        return await generateImageThumbnail(fileData, originalFile);
+    } else {
+        return generateDefaultThumbnail(fileData.type);
+    }
+}
+
+async function generateImageThumbnail(fileData, originalFile) {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        img.onload = function() {
+            try {
+                const size = 120; // حجم المعاينة المصغرة
+                canvas.width = size;
+                canvas.height = size;
+                
+                // حساب النسبة والموضع
+                const scale = Math.min(size / img.width, size / img.height);
+                const x = (size - img.width * scale) / 2;
+                const y = (size - img.height * scale) / 2;
+                
+                // خلفية بيضاء
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, size, size);
+                
+                // رسم الصورة
+                ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+            } catch (error) {
+                console.error('خطأ في إنشاء معاينة الصورة:', error);
+                resolve(generateDefaultThumbnail(fileData.type));
+            }
+        };
+        
+        img.onerror = () => {
+            resolve(generateDefaultThumbnail(fileData.type));
+        };
+        
+        // استخدام البيانات المضغوطة أو الأصلية
+        if (fileData.data && fileData.data.startsWith('data:')) {
+            img.src = fileData.data;
+        } else if (originalFile) {
+            img.src = URL.createObjectURL(originalFile);
+        } else {
+            resolve(generateDefaultThumbnail(fileData.type));
         }
     });
 }
 
-function addAttachmentButtonToSectionFixed(section) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'attachment-button-fixed';
-    button.innerHTML = `
-        <i class="fas fa-paperclip"></i>
-        <span>المرفقات المحسنة</span>
-        <span class="attachment-count-badge" id="attachment-badge-fixed-${generateSectionIdFixed(section)}">0</span>
-    `;
+function generateDefaultThumbnail(fileType) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const size = 120;
     
-    button.onclick = () => {
-        const caseId = extractCaseIdFixed(section);
-        openAttachmentManagerFixed(caseId);
-    };
+    canvas.width = size;
+    canvas.height = size;
     
-    // إضافة الزر
-    if (currentAttachmentSettings.buttonPosition === 'top') {
-        section.insertBefore(button, section.firstChild);
-    } else {
-        section.appendChild(button);
-    }
+    const typeInfo = getFileTypeInfo(fileType);
+    
+    // خلفية ملونة
+    ctx.fillStyle = typeInfo.color || '#95a5a6';
+    ctx.fillRect(0, 0, size, size);
+    
+    // أيقونة
+    ctx.font = '40px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'white';
+    ctx.fillText(typeInfo.icon || '📄', size/2, size/2 - 10);
+    
+    // امتداد الملف
+    const extension = getFileExtension(fileType);
+    ctx.font = '12px Arial';
+    ctx.fillText(extension, size/2, size/2 + 25);
+    
+    return canvas.toDataURL('image/jpeg', 0.8);
 }
 
 // ==============================
-// وظائف مساعدة محسنة
+// تحديث الواجهة المحسن
 // ==============================
-function generateSectionIdFixed(section) {
-    return 'section_' + Math.random().toString(36).substr(2, 6);
-}
-
-function extractCaseIdFixed(section) {
-    // محاولة استخراج معرف الحالة
-    if (typeof getFormData === 'function') {
-        const formData = getFormData();
-        if (formData && formData.id) {
-            return formData.id;
-        }
-        if (formData && formData.formNumber) {
-            return 'case_' + formData.formNumber;
-        }
-    }
-    
-    // إنشاء معرف افتراضي
-    return 'current_case_' + Date.now();
-}
-
-function getAcceptedFileTypesFixed() {
-    return currentAttachmentSettings.allowedFileTypes.join(',');
-}
-
-async function updateStorageInfoFixed() {
+async function refreshAllViews() {
     try {
-        const storageInfo = await StorageManager.checkStorageQuota();
-        const storageInfoElement = document.getElementById('storage-info');
+        // تحديث أيقونة الشريط الجانبي
+        await updateSidebarIcon();
         
-        if (storageInfoElement) {
-            const usageColor = storageInfo.percentUsed > 90 ? '#e74c3c' : 
-                              storageInfo.percentUsed > 70 ? '#f39c12' : '#27ae60';
-            
-            storageInfoElement.innerHTML = `
-                <span style="color: ${usageColor}">
-                    💾 ${StorageManager.formatBytes(storageInfo.usage)} / ${StorageManager.formatBytes(storageInfo.quota)} 
-                    (${storageInfo.percentUsed.toFixed(1)}%)
-                </span>
-            `;
+        // تحديث مدير المرفقات إذا كان مفتوحاً
+        if (attachmentManager && attachmentManager.querySelector('.attachment-overlay.show')) {
+            await refreshAttachmentManager();
         }
+        
+        // تحديث أزرار المرفقات في النماذج
+        updateAttachmentButtons();
+        
     } catch (error) {
-        console.warn('تعذر تحديث معلومات التخزين:', error);
+        console.error('خطأ في تحديث الواجهة:', error);
     }
 }
 
-function updateAttachmentStatsFixed() {
-    const statsElement = document.getElementById('attachment-stats-fixed');
-    const compressionElement = document.getElementById('compression-info');
-    
-    if (statsElement) {
-        statsElement.innerHTML = `
-            <span>${storageStats.fileCount} ملفات</span>
-            <span>${StorageManager.formatBytes(storageStats.totalSize)}</span>
-        `;
-    }
-    
-    if (compressionElement) {
-        const ratio = (storageStats.compressionRatio * 100).toFixed(1);
-        compressionElement.innerHTML = `<small>توفير مساحة: ${ratio}%</small>`;
+async function updateSidebarIcon() {
+    try {
+        const counts = await getAttachmentCounts();
+        
+        // تحديث العدادات
+        updateElement('total-attachments-count', counts.total);
+        updateElement('sayed-attachments-count', counts.sayed);
+        updateElement('expenses-attachments-count', counts.expenses);
+        updateElement('general-attachments-count', counts.general);
+        
+    } catch (error) {
+        console.error('خطأ في تحديث أيقونة الشريط الجانبي:', error);
     }
 }
 
-function refreshAttachmentListFixed() {
-    const listContainer = document.getElementById('attachment-list-fixed');
-    if (!listContainer || !currentCaseId) return;
-    
-    const caseAttachments = attachmentsData.get(currentCaseId) || [];
-    
-    if (caseAttachments.length === 0) {
-        listContainer.innerHTML = `
-            <div class="empty-attachments">
-                <i class="fas fa-folder-open"></i>
-                <h4>لا توجد مرفقات</h4>
-                <p>ابدأ برفع الملفات للحالة الحالية</p>
+async function getAttachmentCounts() {
+    try {
+        const metadata = Array.from(attachmentsCache.values());
+        
+        return {
+            total: metadata.length,
+            sayed: metadata.filter(f => f.caseType === 'سيد').length,
+            expenses: metadata.filter(f => f.caseType === 'مصاريف').length,
+            general: metadata.filter(f => f.caseType === 'عام').length
+        };
+    } catch (error) {
+        return { total: 0, sayed: 0, expenses: 0, general: 0 };
+    }
+}
+
+// ==============================
+// معرض المرفقات المحسن
+// ==============================
+function openAttachmentGallery() {
+    createAttachmentGallery('all');
+}
+
+function openAttachmentsByType(caseType) {
+    createAttachmentGallery(caseType);
+}
+
+function createAttachmentGallery(filterType = 'all') {
+    const gallery = document.createElement('div');
+    gallery.id = 'attachment-gallery';
+    gallery.innerHTML = `
+        <div class="gallery-overlay">
+            <div class="gallery-container">
+                <div class="gallery-header">
+                    <h3>📎 ${filterType === 'all' ? 'جميع المرفقات' : 'مرفقات ' + filterType}</h3>
+                    <button class="gallery-close" onclick="closeAttachmentGallery()">✕</button>
+                </div>
+                <div class="gallery-content">
+                    <div class="gallery-grid" id="gallery-grid">
+                        <!-- المرفقات ستظهر هنا -->
+                    </div>
+                </div>
+                <div class="gallery-footer">
+                    <div class="gallery-stats" id="gallery-stats">جاري التحميل...</div>
+                </div>
             </div>
-        `;
-        return;
-    }
-    
-    // جلب البيانات الخفيفة
-    const files = caseAttachments
-        .map(id => lightweightDatabase.get(id))
-        .filter(Boolean)
-        .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
-    
-    listContainer.innerHTML = `
-        <div class="attachment-grid-fixed">
-            ${files.map(file => createFileCardFixed(file)).join('')}
         </div>
     `;
     
-    updateAttachmentStatsFixed();
+    document.body.appendChild(gallery);
+    
+    // تحميل المرفقات
+    loadGalleryContent(filterType);
+    
+    // إظهار المعرض
+    setTimeout(() => {
+        gallery.querySelector('.gallery-overlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }, 100);
 }
 
-function createFileCardFixed(file) {
-    const typeIcons = {
-        'images': '🖼️',
-        'documents': '📄',
-        'word': '📝',
-        'excel': '📊',
-        'text': '📃',
-        'other': '📁'
-    };
-    
-    const typeColors = {
-        'images': '#e74c3c',
-        'documents': '#3498db',
-        'word': '#2980b9',
-        'excel': '#27ae60',
-        'text': '#95a5a6',
-        'other': '#95a5a6'
-    };
-    
-    const icon = typeIcons[file.category] || typeIcons.other;
-    const color = typeColors[file.category] || typeColors.other;
+async function loadGalleryContent(filterType) {
+    try {
+        const galleryGrid = document.getElementById('gallery-grid');
+        const galleryStats = document.getElementById('gallery-stats');
+        
+        if (!galleryGrid) return;
+        
+        // جلب المرفقات
+        let files = Array.from(attachmentsCache.values());
+        
+        if (filterType !== 'all') {
+            files = files.filter(f => f.caseType === filterType);
+        }
+        
+        // ترتيب حسب التاريخ (الأحدث أولاً)
+        files.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+        
+        if (files.length === 0) {
+            galleryGrid.innerHTML = `
+                <div class="gallery-empty">
+                    <i class="fas fa-folder-open"></i>
+                    <h4>لا توجد مرفقات</h4>
+                    <p>${filterType === 'all' ? 'لم يتم رفع أي ملفات بعد' : 'لا توجد مرفقات لهذا النوع'}</p>
+                </div>
+            `;
+        } else {
+            galleryGrid.innerHTML = files.map(file => createGalleryItem(file)).join('');
+        }
+        
+        // إحصائيات
+        const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+        galleryStats.textContent = `${files.length} ملف • ${formatFileSize(totalSize)}`;
+        
+    } catch (error) {
+        console.error('خطأ في تحميل معرض المرفقات:', error);
+        const galleryGrid = document.getElementById('gallery-grid');
+        if (galleryGrid) {
+            galleryGrid.innerHTML = '<div class="gallery-error">حدث خطأ في تحميل المرفقات</div>';
+        }
+    }
+}
+
+function createGalleryItem(file) {
+    const typeInfo = getFileTypeInfo(file.type);
     
     return `
-        <div class="file-card-fixed" data-file-id="${file.id}">
-            <div class="file-thumbnail-fixed" style="background: ${color}">
+        <div class="gallery-item" data-file-id="${file.id}">
+            <div class="gallery-thumbnail" onclick="previewFile('${file.id}')">
                 ${file.thumbnail ? 
                     `<img src="${file.thumbnail}" alt="${file.name}">` : 
-                    `<span class="file-icon-fixed">${icon}</span>`
+                    `<div class="default-thumb" style="background: ${typeInfo.color}">${typeInfo.icon}</div>`
                 }
-                ${file.compressed ? '<div class="compressed-badge">📦</div>' : ''}
-            </div>
-            <div class="file-info-fixed">
-                <div class="file-name-fixed" title="${file.name}">${truncateTextFixed(file.name, 20)}</div>
-                <div class="file-meta-fixed">
-                    <span class="file-size-fixed">${StorageManager.formatBytes(file.size)}</span>
-                    <span class="file-date-fixed">${formatDateFixed(file.uploadDate)}</span>
+                <div class="file-type-badge" style="background: ${typeInfo.color}">
+                    ${getFileExtension(file.type)}
                 </div>
             </div>
-            <div class="file-actions-fixed">
-                <button class="action-btn-fixed" onclick="downloadFileFixed('${file.id}')" title="تحميل">
+            <div class="gallery-info">
+                <div class="file-name" title="${file.name}">${truncateText(file.name, 20)}</div>
+                <div class="file-meta">
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                    <span class="case-type">${file.caseType}</span>
+                </div>
+                <div class="file-date">${formatRelativeDate(file.uploadDate)}</div>
+            </div>
+            <div class="gallery-actions">
+                <button class="action-btn" onclick="downloadFile('${file.id}')" title="تحميل">
                     <i class="fas fa-download"></i>
                 </button>
-                <button class="action-btn-fixed delete-btn-fixed" onclick="deleteFileFixed('${file.id}')" title="حذف">
+                <button class="action-btn delete-btn" onclick="deleteFileFromGallery('${file.id}')" title="حذف">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -1138,74 +811,39 @@ function createFileCardFixed(file) {
     `;
 }
 
-async function downloadFileFixed(fileId) {
-    try {
-        showAttachmentToast('جاري تحضير التحميل...', 'info');
-        
-        const fileMetadata = lightweightDatabase.get(fileId);
-        if (!fileMetadata) {
-            showAttachmentToast('الملف غير موجود', 'error');
-            return;
-        }
-        
-        // تحميل بيانات الملف
-        const fileDataStr = localStorage.getItem(`file_data_${fileId}`);
-        if (!fileDataStr) {
-            showAttachmentToast('بيانات الملف غير متوفرة', 'error');
-            return;
-        }
-        
-        const fileData = JSON.parse(fileDataStr);
-        
-        // إنشاء رابط التحميل
-        const link = document.createElement('a');
-        link.href = fileData.data;
-        link.download = fileMetadata.name;
-        link.click();
-        
-        showAttachmentToast(`✅ تم تحميل ${fileMetadata.name}`, 'success');
-        
-    } catch (error) {
-        console.error('خطأ في تحميل الملف:', error);
-        showAttachmentToast('فشل في تحميل الملف', 'error');
+function closeAttachmentGallery() {
+    const gallery = document.getElementById('attachment-gallery');
+    if (gallery) {
+        gallery.querySelector('.gallery-overlay').classList.remove('show');
+        document.body.style.overflow = 'auto';
+        setTimeout(() => {
+            document.body.removeChild(gallery);
+        }, 300);
     }
 }
 
-async function deleteFileFixed(fileId) {
-    const fileMetadata = lightweightDatabase.get(fileId);
-    if (!fileMetadata) {
-        showAttachmentToast('الملف غير موجود', 'error');
-        return;
-    }
+// ==============================
+// حذف الملفات المحسن
+// ==============================
+async function deleteFileFromGallery(fileId) {
+    const file = attachmentsCache.get(fileId);
+    if (!file) return;
     
-    if (confirm(`هل أنت متأكد من حذف الملف "${fileMetadata.name}"؟`)) {
+    if (confirm(`هل أنت متأكد من حذف الملف "${file.name}"؟`)) {
         try {
-            // حذف من قاعدة البيانات الخفيفة
-            lightweightDatabase.delete(fileId);
+            await deleteFileFromDatabase(fileId);
             
-            // حذف من قائمة مرفقات الحالة
-            const caseAttachments = attachmentsData.get(fileMetadata.caseId);
-            if (caseAttachments) {
-                const index = caseAttachments.indexOf(fileId);
-                if (index > -1) {
-                    caseAttachments.splice(index, 1);
-                }
-            }
+            // إزالة من الكاش
+            attachmentsCache.delete(fileId);
             
-            // حذف بيانات الملف
-            localStorage.removeItem(`file_data_${fileId}`);
+            // تحديث المعرض
+            const filterType = getCurrentGalleryFilter();
+            await loadGalleryContent(filterType);
             
-            // حفظ التغييرات
-            await saveAttachmentDatabaseFixed();
+            // تحديث الواجهة
+            await refreshAllViews();
             
-            // تحديث الإحصائيات
-            storageStats.fileCount--;
-            storageStats.totalSize -= fileMetadata.size;
-            
-            // تحديث العرض
-            refreshAttachmentListFixed();
-            
-            showAttachmentToast(`✅ تم حذف ${fileMetadata.name}`, 'success');
+            showAttachmentToast(`تم حذف ${file.name}`, 'success');
             
         } catch (error) {
             console.error('خطأ في حذف الملف:', error);
@@ -1214,217 +852,319 @@ async function deleteFileFixed(fileId) {
     }
 }
 
-// ==============================
-// وظائف إضافية محسنة
-// ==============================
-function setupFileUploadHandlerFixed() {
-    const fileInput = document.getElementById('attachment-file-input-fixed');
-    if (!fileInput) return;
-    
-    fileInput.addEventListener('change', function(e) {
-        const files = [...e.target.files];
-        handleFileUploadFixed(files);
-        this.value = '';
-    });
-}
-
-function setupDragAndDropFixed() {
-    const dropzone = document.getElementById('attachment-dropzone-fixed');
-    if (!dropzone) return;
-    
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropzone.addEventListener(eventName, preventDefaults, false);
-    });
-    
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropzone.addEventListener(eventName, () => dropzone.classList.add('drag-over'), false);
-    });
-    
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropzone.addEventListener(eventName, () => dropzone.classList.remove('drag-over'), false);
-    });
-    
-    dropzone.addEventListener('drop', handleDropFixed, false);
-}
-
-function preventDefaults(e) {
-    e.preventDefault();
-    e.stopPropagation();
-}
-
-function handleDropFixed(e) {
-    const dt = e.dataTransfer;
-    const files = [...dt.files];
-    handleFileUploadFixed(files);
-}
-
-function triggerFileUploadFixed() {
-    const fileInput = document.getElementById('attachment-file-input-fixed');
-    if (fileInput) {
-        fileInput.click();
-    }
-}
-
-function openAttachmentManagerFixed(caseId = null) {
-    if (!attachmentManager) {
-        createAttachmentManagerFixed();
+async function deleteFileFromDatabase(fileId) {
+    if (!attachmentDatabase.db) {
+        throw new Error('قاعدة البيانات غير متاحة');
     }
     
-    currentCaseId = caseId;
+    const transaction = attachmentDatabase.db.transaction(['files', 'metadata', 'thumbnails', 'cases'], 'readwrite');
+    
+    // حذف من جميع المتاجر
+    await Promise.all([
+        deleteFromStore(transaction.objectStore('files'), fileId),
+        deleteFromStore(transaction.objectStore('metadata'), fileId),
+        deleteFromStore(transaction.objectStore('thumbnails'), fileId)
+    ]);
     
     // تحديث معلومات الحالة
-    updateCaseInfoFixed(caseId);
-    
-    // عرض المدير
-    const overlay = attachmentManager.querySelector('.attachment-overlay');
-    overlay.classList.add('show');
-    document.body.style.overflow = 'hidden';
-    
-    // تحديث قائمة المرفقات
-    refreshAttachmentListFixed();
-    
-    // تحديث معلومات التخزين
-    updateStorageInfoFixed();
-}
-
-function closeAttachmentManagerFixed() {
-    if (attachmentManager) {
-        const overlay = attachmentManager.querySelector('.attachment-overlay');
-        overlay.classList.remove('show');
-        document.body.style.overflow = 'auto';
-    }
-    currentCaseId = null;
-}
-
-function updateCaseInfoFixed(caseId) {
-    const caseInfoElement = document.getElementById('current-case-info');
-    if (!caseInfoElement) return;
-    
-    if (caseId) {
-        const attachmentCount = (attachmentsData.get(caseId) || []).length;
-        caseInfoElement.textContent = `الحالة: ${caseId} (${attachmentCount} مرفق)`;
-    } else {
-        caseInfoElement.textContent = 'لم يتم تحديد حالة';
-    }
-}
-
-async function cleanupStorageFixed() {
-    if (confirm('هل تريد تنظيف مساحة التخزين؟ سيتم حذف الملفات المؤقتة والقديمة.')) {
-        try {
-            showAttachmentToast('🧹 جاري تنظيف مساحة التخزين...', 'info');
+    const file = attachmentsCache.get(fileId);
+    if (file && file.caseId) {
+        const casesStore = transaction.objectStore('cases');
+        const caseData = await getCaseFromDB(file.caseId);
+        if (caseData) {
+            caseData.files = caseData.files.filter(id => id !== fileId);
+            caseData.totalSize = Math.max(0, (caseData.totalSize || 0) - file.size);
+            caseData.lastUpdate = new Date().toISOString();
             
-            const freedSpace = await StorageManager.freeUpSpace();
-            
-            // تحديث معلومات التخزين
-            await updateStorageInfoFixed();
-            
-            showAttachmentToast(`✅ تم تحرير ${StorageManager.formatBytes(freedSpace)} تقريباً`, 'success');
-            
-        } catch (error) {
-            console.error('فشل في تنظيف التخزين:', error);
-            showAttachmentToast('فشل في تنظيف مساحة التخزين', 'error');
+            await new Promise((resolve, reject) => {
+                const request = casesStore.put(caseData);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
         }
     }
 }
 
-function searchAttachmentsFixed() {
-    const searchTerm = document.getElementById('attachment-search-fixed').value.toLowerCase();
-    const fileCards = document.querySelectorAll('.file-card-fixed');
-    
-    fileCards.forEach(card => {
-        const fileName = card.querySelector('.file-name-fixed').textContent.toLowerCase();
-        card.style.display = fileName.includes(searchTerm) ? 'block' : 'none';
+function deleteFromStore(store, id) {
+    return new Promise((resolve, reject) => {
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
     });
 }
 
-function filterAttachmentsFixed() {
-    const filterType = document.getElementById('attachment-filter-type-fixed').value;
-    const fileCards = document.querySelectorAll('.file-card-fixed');
-    
-    fileCards.forEach(card => {
-        const fileId = card.getAttribute('data-file-id');
-        const fileMetadata = lightweightDatabase.get(fileId);
+// ==============================
+// معاينة الملفات المحسنة
+// ==============================
+async function previewFile(fileId) {
+    try {
+        const file = await getFileFromDatabase(fileId);
+        if (!file) {
+            showAttachmentToast('الملف غير موجود', 'error');
+            return;
+        }
         
-        if (filterType === 'all' || fileMetadata.category === filterType) {
-            card.style.display = 'block';
+        if (file.category === 'images') {
+            createImageViewer(file);
         } else {
-            card.style.display = 'none';
+            createFileViewer(file);
         }
-    });
+        
+    } catch (error) {
+        console.error('خطأ في معاينة الملف:', error);
+        showAttachmentToast('فشل في معاينة الملف', 'error');
+    }
 }
 
-// ==============================
-// وظائف التقدم والإشعارات
-// ==============================
-function showUploadProgressFixed() {
-    const progressBar = document.createElement('div');
-    progressBar.id = 'upload-progress-fixed';
-    progressBar.innerHTML = `
-        <div class="progress-overlay">
-            <div class="progress-container-fixed">
-                <div class="progress-header">
-                    <h4>جاري رفع الملفات</h4>
-                    <button onclick="cancelUploadFixed()" class="cancel-btn">✕</button>
+async function getFileFromDatabase(fileId) {
+    if (!attachmentDatabase.db) return null;
+    
+    try {
+        const transaction = attachmentDatabase.db.transaction(['files', 'metadata'], 'readonly');
+        
+        // جلب البيانات الوصفية
+        const metadata = await new Promise((resolve, reject) => {
+            const request = transaction.objectStore('metadata').get(fileId);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+        
+        if (!metadata) return null;
+        
+        // جلب بيانات الملف
+        const fileData = await new Promise((resolve, reject) => {
+            const request = transaction.objectStore('files').get(fileId);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+        
+        return { ...metadata, data: fileData?.data };
+        
+    } catch (error) {
+        console.error('خطأ في جلب الملف:', error);
+        return null;
+    }
+}
+
+function createImageViewer(file) {
+    const viewer = document.createElement('div');
+    viewer.id = 'image-viewer';
+    viewer.innerHTML = `
+        <div class="viewer-overlay">
+            <div class="viewer-container">
+                <div class="viewer-header">
+                    <h3>${file.name}</h3>
+                    <button class="viewer-close" onclick="closeImageViewer()">✕</button>
                 </div>
-                <div class="progress-bar-fixed">
-                    <div class="progress-fill-fixed" style="width: 0%"></div>
+                <div class="viewer-content">
+                    <img src="${file.data}" alt="${file.name}" class="viewer-image">
                 </div>
-                <div class="progress-text-fixed">بدء الرفع...</div>
-                <div class="progress-details">
-                    <small>نصيحة: الصور سيتم ضغطها تلقائياً لتوفير المساحة</small>
+                <div class="viewer-footer">
+                    <div class="image-info">
+                        <span>${formatFileSize(file.size)}</span>
+                        <span>•</span>
+                        <span>${file.caseType}</span>
+                        <span>•</span>
+                        <span>${formatRelativeDate(file.uploadDate)}</span>
+                    </div>
+                    <div class="viewer-actions">
+                        <button class="viewer-btn" onclick="downloadFile('${file.id}')">
+                            <i class="fas fa-download"></i> تحميل
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     `;
     
-    document.body.appendChild(progressBar);
-}
-
-function updateUploadProgressFixed(percentage, message = '') {
-    const progressFill = document.querySelector('#upload-progress-fixed .progress-fill-fixed');
-    const progressText = document.querySelector('#upload-progress-fixed .progress-text-fixed');
+    document.body.appendChild(viewer);
     
-    if (progressFill) {
-        progressFill.style.width = Math.min(100, Math.max(0, percentage)) + '%';
-    }
-    
-    if (progressText && message) {
-        progressText.textContent = message;
-    }
+    setTimeout(() => {
+        viewer.querySelector('.viewer-overlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }, 100);
 }
 
-function hideUploadProgressFixed() {
-    const progressBar = document.getElementById('upload-progress-fixed');
-    if (progressBar) {
-        progressBar.remove();
+function closeImageViewer() {
+    const viewer = document.getElementById('image-viewer');
+    if (viewer) {
+        viewer.querySelector('.viewer-overlay').classList.remove('show');
+        document.body.style.overflow = 'auto';
+        setTimeout(() => {
+            document.body.removeChild(viewer);
+        }, 300);
     }
-}
-
-function cancelUploadFixed() {
-    hideUploadProgressFixed();
-    showAttachmentToast('تم إلغاء رفع الملفات', 'info');
 }
 
 // ==============================
-// وظائف مساعدة عامة
+// تحميل الملفات المحسن
 // ==============================
-function loadAttachmentSettingsFixed() {
+async function downloadFile(fileId) {
     try {
-        const settings = localStorage.getItem('charity_attachment_settings_v2');
-        if (settings) {
-            currentAttachmentSettings = { ...DEFAULT_ATTACHMENT_SETTINGS, ...JSON.parse(settings) };
+        const file = await getFileFromDatabase(fileId);
+        if (!file) {
+            showAttachmentToast('الملف غير موجود', 'error');
+            return;
+        }
+        
+        // إنشاء رابط التحميل
+        const link = document.createElement('a');
+        link.href = file.data;
+        link.download = file.name;
+        link.click();
+        
+        showAttachmentToast(`تم تحميل ${file.name}`, 'success');
+        
+    } catch (error) {
+        console.error('خطأ في تحميل الملف:', error);
+        showAttachmentToast('فشل في تحميل الملف', 'error');
+    }
+}
+
+// ==============================
+// الحفظ التلقائي المحسن
+// ==============================
+function startAutoSave() {
+    if (!currentAttachmentSettings.autoSave) return;
+    
+    setInterval(async () => {
+        try {
+            await saveSettingsToStorage();
+            console.log('💾 تم الحفظ التلقائي للإعدادات');
+        } catch (error) {
+            console.error('خطأ في الحفظ التلقائي:', error);
+        }
+    }, currentAttachmentSettings.saveInterval);
+}
+
+async function saveSettingsToStorage() {
+    try {
+        const settings = {
+            ...currentAttachmentSettings,
+            lastSave: new Date().toISOString()
+        };
+        
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+        return true;
+    } catch (error) {
+        console.error('خطأ في حفظ الإعدادات:', error);
+        return false;
+    }
+}
+
+async function loadAttachmentSettings() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+        if (saved) {
+            const settings = JSON.parse(saved);
+            currentAttachmentSettings = { ...DEFAULT_ATTACHMENT_SETTINGS, ...settings };
         }
     } catch (error) {
-        console.error('خطأ في تحميل إعدادات المرفقات:', error);
+        console.error('خطأ في تحميل الإعدادات:', error);
     }
 }
 
-function truncateTextFixed(text, maxLength) {
-    if (text.length <= maxLength) return text;
-    return text.substr(0, maxLength) + '...';
+// ==============================
+// البديل للتخزين العادي
+// ==============================
+async function fallbackToLocalStorage() {
+    console.log('⚠️ التحول للتخزين العادي كبديل...');
+    
+    try {
+        currentAttachmentSettings.useIndexedDB = false;
+        
+        // محاولة تحميل البيانات من التخزين العادي
+        const savedData = localStorage.getItem('charity_attachments_fallback');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            for (const [id, file] of Object.entries(data.files || {})) {
+                attachmentsCache.set(id, file);
+            }
+        }
+        
+        // إعداد حفظ بديل
+        window.addEventListener('beforeunload', saveFallbackData);
+        
+        console.log('✅ تم التحول للتخزين البديل بنجاح');
+        
+    } catch (error) {
+        console.error('❌ فشل في التحول للتخزين البديل:', error);
+    }
 }
 
-function formatDateFixed(dateString) {
+function saveFallbackData() {
+    try {
+        const data = {
+            files: Object.fromEntries(attachmentsCache),
+            timestamp: new Date().toISOString()
+        };
+        
+        localStorage.setItem('charity_attachments_fallback', JSON.stringify(data));
+    } catch (error) {
+        console.error('خطأ في حفظ البيانات البديلة:', error);
+    }
+}
+
+// ==============================
+// وظائف مساعدة محسنة
+// ==============================
+function validateFile(file) {
+    // التحقق من الحجم
+    if (file.size > currentAttachmentSettings.maxFileSize) {
+        showAttachmentToast(`الملف "${file.name}" كبير جداً (${formatFileSize(file.size)})`, 'error');
+        return false;
+    }
+    
+    // التحقق من النوع
+    if (!currentAttachmentSettings.allowedFileTypes.includes(file.type)) {
+        showAttachmentToast(`نوع الملف "${file.name}" غير مدعوم`, 'error');
+        return false;
+    }
+    
+    return true;
+}
+
+function getFileCategory(mimeType) {
+    if (mimeType.startsWith('image/')) return 'images';
+    if (mimeType === 'application/pdf') return 'pdf';
+    if (mimeType.includes('word')) return 'word';
+    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return 'excel';
+    return 'other';
+}
+
+function getFileTypeInfo(mimeType) {
+    const category = getFileCategory(mimeType);
+    const types = {
+        images: { icon: '🖼️', color: '#3498db' },
+        pdf: { icon: '📄', color: '#e74c3c' },
+        word: { icon: '📝', color: '#2980b9' },
+        excel: { icon: '📊', color: '#27ae60' },
+        other: { icon: '📁', color: '#95a5a6' }
+    };
+    return types[category] || types.other;
+}
+
+function getFileExtension(mimeType) {
+    const extensions = {
+        'image/jpeg': 'JPG',
+        'image/png': 'PNG',
+        'image/gif': 'GIF',
+        'application/pdf': 'PDF',
+        'application/msword': 'DOC',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+        'text/plain': 'TXT'
+    };
+    return extensions[mimeType] || 'FILE';
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 بايت';
+    const sizes = ['بايت', 'كيلوبايت', 'ميجابايت', 'جيجابايت'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function formatRelativeDate(dateString) {
     const date = new Date(dateString);
     const now = new Date();
     const diff = now - date;
@@ -1437,60 +1177,262 @@ function formatDateFixed(dateString) {
     return date.toLocaleDateString('ar-EG');
 }
 
+function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substr(0, maxLength) + '...';
+}
+
+function generateFileId() {
+    return 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+async function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+function calculateNewDimensions(originalWidth, originalHeight, maxWidth, maxHeight) {
+    let width = originalWidth;
+    let height = originalHeight;
+    
+    if (width > maxWidth || height > maxHeight) {
+        const aspectRatio = width / height;
+        
+        if (width > height) {
+            width = maxWidth;
+            height = width / aspectRatio;
+        } else {
+            height = maxHeight;
+            width = height * aspectRatio;
+        }
+    }
+    
+    return { width: Math.round(width), height: Math.round(height) };
+}
+
+function updateElement(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+    }
+}
+
+function getCurrentGalleryFilter() {
+    const gallery = document.getElementById('attachment-gallery');
+    if (!gallery) return 'all';
+    
+    const title = gallery.querySelector('.gallery-header h3').textContent;
+    if (title.includes('السيد')) return 'سيد';
+    if (title.includes('المصاريف')) return 'مصاريف';
+    if (title.includes('العامة') || title.includes('عام')) return 'عام';
+    return 'all';
+}
+
+async function getCaseFromDB(caseId) {
+    if (!attachmentDatabase.db) return null;
+    
+    try {
+        const transaction = attachmentDatabase.db.transaction(['cases'], 'readonly');
+        const store = transaction.objectStore('cases');
+        
+        return new Promise((resolve, reject) => {
+            const request = store.get(caseId);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    } catch (error) {
+        return null;
+    }
+}
+
+// ==============================
+// شريط التقدم المحسن
+// ==============================
+function showUploadProgress() {
+    const progress = document.createElement('div');
+    progress.id = 'upload-progress-enhanced';
+    progress.innerHTML = `
+        <div class="progress-overlay">
+            <div class="progress-container">
+                <div class="progress-header">
+                    <h4>📤 جاري رفع الملفات</h4>
+                    <div class="progress-spinner"></div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="progress-text">بدء الرفع...</div>
+                <div class="progress-details">
+                    <span id="progress-percentage">0%</span>
+                    <span id="progress-status">جاري التحضير...</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(progress);
+}
+
+function updateUploadProgress(percentage, status = '') {
+    const progressFill = document.querySelector('#upload-progress-enhanced .progress-fill');
+    const progressText = document.querySelector('#upload-progress-enhanced .progress-text');
+    const progressPercentage = document.getElementById('progress-percentage');
+    const progressStatus = document.getElementById('progress-status');
+    
+    if (progressFill) {
+        progressFill.style.width = Math.round(percentage) + '%';
+    }
+    
+    if (progressPercentage) {
+        progressPercentage.textContent = Math.round(percentage) + '%';
+    }
+    
+    if (status) {
+        if (progressText) progressText.textContent = status;
+        if (progressStatus) progressStatus.textContent = status;
+    }
+}
+
+function hideUploadProgress() {
+    const progress = document.getElementById('upload-progress-enhanced');
+    if (progress) {
+        setTimeout(() => {
+            if (document.body.contains(progress)) {
+                document.body.removeChild(progress);
+            }
+        }, 1000);
+    }
+}
+
+// ==============================
+// الإشعارات المحسنة
+// ==============================
 function showAttachmentToast(message, type = 'info') {
     const toast = document.createElement('div');
-    toast.className = `attachment-toast-fixed ${type}`;
+    toast.className = `attachment-toast ${type}`;
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    
     toast.innerHTML = `
-        <div class="toast-icon-fixed">
-            <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+        <div class="toast-icon">
+            <i class="fas ${icons[type] || icons.info}"></i>
         </div>
-        <div class="toast-message-fixed">${message}</div>
+        <div class="toast-message">${message}</div>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
     `;
     
     document.body.appendChild(toast);
     
-    setTimeout(() => toast.classList.add('show'), 100);
-    
+    // إظهار الإشعار
     setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (document.body.contains(toast)) {
-                document.body.removeChild(toast);
-            }
-        }, 300);
+        toast.classList.add('show');
+    }, 100);
+    
+    // إخفاء الإشعار تلقائياً
+    setTimeout(() => {
+        if (document.body.contains(toast)) {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 300);
+        }
     }, 4000);
 }
 
-function startAutoCleanup() {
-    // تنظيف تلقائي كل ساعة
-    setInterval(async () => {
-        try {
-            const storageInfo = await StorageManager.checkStorageQuota();
+// ==============================
+// أزرار المرفقات للنماذج
+// ==============================
+function addAttachmentButtons() {
+    const forms = document.querySelectorAll('.form-container, .content-header');
+    forms.forEach(form => {
+        if (!form.querySelector('.attachment-quick-btn')) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'attachment-quick-btn';
+            btn.innerHTML = `
+                <i class="fas fa-paperclip"></i>
+                <span>مرفقات</span>
+                <span class="attachment-count">0</span>
+            `;
             
-            // إذا كانت المساحة ممتلئة بنسبة أكثر من 85%
-            if (storageInfo.percentUsed > 85) {
-                console.log('🧹 بدء التنظيف التلقائي...');
-                await StorageManager.freeUpSpace();
-            }
-        } catch (error) {
-            console.warn('فشل في التنظيف التلقائي:', error);
+            btn.onclick = () => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.multiple = true;
+                fileInput.accept = currentAttachmentSettings.allowedFileTypes.join(',');
+                fileInput.onchange = (e) => handleFileUpload([...e.target.files]);
+                fileInput.click();
+            };
+            
+            form.appendChild(btn);
         }
-    }, 3600000); // كل ساعة
+    });
 }
 
-function setupAttachmentEventListenersFixed() {
+function updateAttachmentButtons() {
+    const buttons = document.querySelectorAll('.attachment-quick-btn .attachment-count');
+    const currentCase = getCurrentCaseInfo();
+    const caseFiles = Array.from(attachmentsCache.values()).filter(f => f.caseId === currentCase.id);
+    
+    buttons.forEach(btn => {
+        btn.textContent = caseFiles.length;
+    });
+}
+
+// ==============================
+// إعداد مستمعي الأحداث
+// ==============================
+function setupAttachmentEventListeners() {
+    // إعداد السحب والإفلات للصفحة كاملة
+    document.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        document.body.classList.add('drag-over-page');
+    });
+    
+    document.addEventListener('dragleave', (e) => {
+        if (!e.relatedTarget) {
+            document.body.classList.remove('drag-over-page');
+        }
+    });
+    
+    document.addEventListener('drop', (e) => {
+        e.preventDefault();
+        document.body.classList.remove('drag-over-page');
+        
+        const files = [...e.dataTransfer.files];
+        if (files.length > 0) {
+            handleFileUpload(files);
+        }
+    });
+    
     // اختصارات لوحة المفاتيح
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.altKey && e.key === 'A') {
+    document.addEventListener('keydown', (e) => {
+        // Ctrl + U لرفع ملفات
+        if (e.ctrlKey && e.key === 'u') {
             e.preventDefault();
-            openAttachmentManagerFixed();
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.multiple = true;
+            fileInput.accept = currentAttachmentSettings.allowedFileTypes.join(',');
+            fileInput.onchange = (e) => handleFileUpload([...e.target.files]);
+            fileInput.click();
         }
         
-        if (e.key === 'Escape' && attachmentManager) {
-            const overlay = attachmentManager.querySelector('.attachment-overlay');
-            if (overlay && overlay.classList.contains('show')) {
-                closeAttachmentManagerFixed();
-            }
+        // Ctrl + G لفتح المعرض
+        if (e.ctrlKey && e.key === 'g') {
+            e.preventDefault();
+            openAttachmentGallery();
         }
     });
 }
@@ -1498,431 +1440,343 @@ function setupAttachmentEventListenersFixed() {
 // ==============================
 // إضافة الأنماط المحسنة
 // ==============================
-function addAttachmentStylesFixed() {
-    if (document.getElementById('attachment-styles-fixed')) return;
+function addAttachmentStyles() {
+    if (document.getElementById('attachment-styles-enhanced')) return;
     
     const styles = document.createElement('style');
-    styles.id = 'attachment-styles-fixed';
+    styles.id = 'attachment-styles-enhanced';
     styles.textContent = `
-        /* أنماط الأزرار المحسنة */
-        .attachment-button-fixed {
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        /* أزرار المرفقات السريعة */
+        .attachment-quick-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
             border: none;
-            padding: 12px 16px;
-            border-radius: 8px;
+            padding: 8px 12px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
+            font-size: 12px;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 5px;
+            margin: 5px;
             transition: all 0.3s ease;
-            margin: 10px 0;
             position: relative;
-            box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
         }
         
-        .attachment-button-fixed:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+        .attachment-quick-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
         }
         
-        .attachment-count-badge {
-            background: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            position: absolute;
-            top: -5px;
-            right: -5px;
+        .attachment-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            min-width: 16px;
+            text-align: center;
         }
         
-        /* نافذة المرفقات المحسنة */
-        .attachment-overlay {
+        /* قسم المرفقات في الشريط الجانبي */
+        .attachment-nav-item {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white !important;
+            margin: 5px 0;
+            border-radius: 8px;
+        }
+        
+        .attachment-nav-item:hover {
+            background: linear-gradient(135deg, #2980b9, #3498db);
+        }
+        
+        /* معرض المرفقات */
+        .gallery-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.8);
             z-index: 10000;
-            display: none;
+            display: flex;
             justify-content: center;
             align-items: center;
-            padding: 15px;
-            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         
-        .attachment-overlay.show {
-            display: flex;
+        .gallery-overlay.show {
+            opacity: 1;
         }
         
-        .attachment-container {
+        .gallery-container {
             background: white;
-            border-radius: 16px;
-            width: 100%;
+            border-radius: 12px;
+            width: 90%;
             max-width: 1000px;
-            max-height: 90vh;
-            overflow: hidden;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+            height: 80%;
+            max-height: 600px;
             display: flex;
             flex-direction: column;
-            animation: slideInUp 0.3s ease;
+            overflow: hidden;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
         }
         
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .gallery-overlay.show .gallery-container {
+            transform: scale(1);
         }
         
-        .attachment-header {
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        .gallery-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .attachment-title h3 {
-            margin: 0 0 8px 0;
-            font-size: 20px;
-            font-weight: 700;
-        }
-        
-        .case-info {
-            font-size: 14px;
-            opacity: 0.95;
-            background: rgba(255,255,255,0.15);
-            padding: 4px 8px;
-            border-radius: 4px;
-            margin-bottom: 5px;
-        }
-        
-        .storage-info {
-            font-size: 12px;
-            opacity: 0.9;
-        }
-        
-        .attachment-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        
-        .attachment-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 10px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.3s;
-            backdrop-filter: blur(10px);
-        }
-        
-        .attachment-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-        
-        .cleanup-btn {
-            background: rgba(241, 196, 15, 0.3);
-        }
-        
-        .cleanup-btn:hover {
-            background: rgba(241, 196, 15, 0.4);
-        }
-        
-        .close-btn {
-            background: rgba(231, 76, 60, 0.3);
-        }
-        
-        .close-btn:hover {
-            background: rgba(231, 76, 60, 0.5);
-        }
-        
-        /* شريط البحث المحسن */
-        .attachment-toolbar {
-            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-            padding: 16px 20px;
-            border-bottom: 1px solid #dee2e6;
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
         }
         
-        .attachment-search {
-            position: relative;
-            flex: 1;
-            min-width: 250px;
-        }
-        
-        .attachment-search input {
-            width: 100%;
-            padding: 12px 45px 12px 16px;
-            border: 2px solid #e9ecef;
-            border-radius: 25px;
-            font-size: 14px;
-            transition: all 0.3s;
-            background: white;
-        }
-        
-        .attachment-search input:focus {
-            outline: none;
-            border-color: #27ae60;
-            box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
-        }
-        
-        .attachment-search i {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
-        }
-        
-        .attachment-filters select {
-            padding: 10px 14px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 14px;
-            background: white;
-            cursor: pointer;
-        }
-        
-        /* منطقة المحتوى */
-        .attachment-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            background: #f8f9fa;
-        }
-        
-        /* منطقة السحب والإفلات المحسنة */
-        .attachment-dropzone {
-            border: 3px dashed #bdc3c7;
-            border-radius: 16px;
-            padding: 40px 20px;
-            text-align: center;
-            margin-bottom: 25px;
-            transition: all 0.3s;
-            background: white;
-        }
-        
-        .attachment-dropzone.drag-over {
-            border-color: #27ae60;
-            background: rgba(39, 174, 96, 0.05);
-            transform: scale(1.02);
-        }
-        
-        .dropzone-content i {
-            font-size: 52px;
-            color: #27ae60;
-            margin-bottom: 16px;
-        }
-        
-        .dropzone-content h4 {
-            color: #2c3e50;
-            margin-bottom: 12px;
+        .gallery-header h3 {
+            margin: 0;
             font-size: 18px;
         }
         
-        .upload-link {
-            background: none;
+        .gallery-close {
+            background: rgba(255, 255, 255, 0.2);
             border: none;
-            color: #27ae60;
-            text-decoration: underline;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
             cursor: pointer;
-            font-size: 15px;
-            font-weight: 600;
-        }
-        
-        .upload-info {
-            margin-top: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        
-        .upload-info small {
-            color: #6c757d;
-            font-size: 12px;
-        }
-        
-        /* عرض الملفات المحسن */
-        .attachment-grid-fixed {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
-        }
-        
-        .file-card-fixed {
-            background: white;
-            border-radius: 12px;
-            padding: 16px;
-            transition: all 0.3s;
-            cursor: pointer;
-            border: 1px solid #e9ecef;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .file-card-fixed:hover {
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            transform: translateY(-3px);
-        }
-        
-        .file-thumbnail-fixed {
-            width: 100%;
-            height: 100px;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 12px;
+            font-size: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
         }
         
-        .file-thumbnail-fixed img {
+        .gallery-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        
+        .gallery-item {
+            background: white;
+            border: 1px solid #e3e6f0;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .gallery-item:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .gallery-thumbnail {
+            position: relative;
+            height: 120px;
+            background: #f8f9fa;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        
+        .gallery-thumbnail img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
         
-        .file-icon-fixed {
-            font-size: 32px;
+        .default-thumb {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
             color: white;
         }
         
-        .compressed-badge {
+        .file-type-badge {
             position: absolute;
             top: 5px;
             right: 5px;
-            background: rgba(39, 174, 96, 0.9);
             color: white;
             padding: 2px 6px;
             border-radius: 10px;
             font-size: 10px;
-            font-weight: 700;
+            font-weight: bold;
         }
         
-        .file-info-fixed {
-            margin-bottom: 12px;
+        .gallery-info {
+            padding: 10px;
         }
         
-        .file-name-fixed {
+        .file-name {
             font-weight: 600;
+            font-size: 12px;
             color: #2c3e50;
-            margin-bottom: 6px;
-            font-size: 14px;
-            line-height: 1.3;
+            margin-bottom: 5px;
         }
         
-        .file-meta-fixed {
+        .file-meta {
             display: flex;
             justify-content: space-between;
-            font-size: 11px;
+            font-size: 10px;
             color: #6c757d;
+            margin-bottom: 3px;
         }
         
-        .file-actions-fixed {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
+        .case-type {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+            padding: 1px 4px;
+            border-radius: 3px;
         }
         
-        .action-btn-fixed {
+        .file-date {
+            font-size: 10px;
+            color: #95a5a6;
+        }
+        
+        .gallery-actions {
+            padding: 8px 10px;
             background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            color: #6c757d;
-            width: 35px;
-            height: 35px;
-            border-radius: 8px;
-            cursor: pointer;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            transition: all 0.3s;
+            justify-content: space-between;
         }
         
-        .action-btn-fixed:hover {
-            background: #e9ecef;
+        .action-btn {
+            background: #e3e6f0;
+            border: none;
+            color: #6c757d;
+            width: 25px;
+            height: 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .action-btn:hover {
+            background: #d6d8db;
             color: #495057;
-            transform: translateY(-1px);
         }
         
-        .delete-btn-fixed:hover {
+        .delete-btn:hover {
             background: #e74c3c;
             color: white;
-            border-color: #e74c3c;
         }
         
-        /* الحالة الفارغة */
-        .empty-attachments {
+        .gallery-footer {
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-top: 1px solid #e3e6f0;
             text-align: center;
-            padding: 60px 20px;
+            font-size: 12px;
             color: #6c757d;
         }
         
-        .empty-attachments i {
-            font-size: 72px;
+        .gallery-empty {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        
+        .gallery-empty i {
+            font-size: 48px;
             color: #bdc3c7;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
-        .empty-attachments h4 {
-            margin-bottom: 12px;
-            color: #2c3e50;
-            font-size: 20px;
+        .gallery-error {
+            text-align: center;
+            padding: 40px;
+            color: #e74c3c;
         }
         
-        /* التذييل المحسن */
-        .attachment-footer {
-            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-            padding: 16px 20px;
-            border-top: 1px solid #dee2e6;
+        /* عارض الصور */
+        .viewer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10001;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .viewer-overlay.show {
+            opacity: 1;
+        }
+        
+        .viewer-header {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
         }
         
-        .attachment-stats {
+        .viewer-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .viewer-content {
+            flex: 1;
             display: flex;
-            gap: 20px;
-            font-size: 14px;
-            color: #495057;
-            font-weight: 600;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
         
-        .compression-info {
-            color: #27ae60;
-            font-weight: 600;
+        .viewer-image {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .viewer-footer {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .image-info {
+            font-size: 14px;
+        }
+        
+        .viewer-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
         }
         
         /* شريط التقدم المحسن */
@@ -1930,231 +1784,200 @@ function addAttachmentStylesFixed() {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             background: rgba(0, 0, 0, 0.8);
-            z-index: 10001;
+            z-index: 10002;
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(8px);
         }
         
-        .progress-container-fixed {
+        .progress-container {
             background: white;
             padding: 30px;
-            border-radius: 16px;
+            border-radius: 12px;
             width: 400px;
-            max-width: 90vw;
-            text-align: center;
-            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
         }
         
         .progress-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             margin-bottom: 20px;
         }
         
         .progress-header h4 {
             margin: 0;
             color: #2c3e50;
-            font-size: 18px;
         }
         
-        .cancel-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            width: 30px;
-            height: 30px;
+        .progress-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e3e6f0;
+            border-top: 2px solid #3498db;
             border-radius: 50%;
-            cursor: pointer;
-            font-size: 16px;
+            animation: spin 1s linear infinite;
         }
         
-        .progress-bar-fixed {
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
             width: 100%;
-            height: 12px;
-            background: #e9ecef;
-            border-radius: 25px;
+            height: 10px;
+            background: #e3e6f0;
+            border-radius: 5px;
             overflow: hidden;
-            margin-bottom: 16px;
+            margin-bottom: 15px;
         }
         
-        .progress-fill-fixed {
+        .progress-fill {
             height: 100%;
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            background: linear-gradient(90deg, #3498db, #2980b9);
             transition: width 0.3s ease;
-            border-radius: 25px;
         }
         
-        .progress-text-fixed {
-            font-weight: 600;
+        .progress-text {
+            font-size: 14px;
             color: #2c3e50;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
         
         .progress-details {
+            display: flex;
+            justify-content: space-between;
             font-size: 12px;
             color: #6c757d;
         }
         
         /* الإشعارات المحسنة */
-        .attachment-toast-fixed {
+        .attachment-toast {
             position: fixed;
-            top: 80px;
+            top: 20px;
             right: 20px;
-            background: #2c3e50;
-            color: white;
-            padding: 16px 20px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-            z-index: 10002;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 10003;
             display: flex;
             align-items: center;
-            gap: 12px;
-            transform: translateX(100%);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            gap: 10px;
+            padding: 12px 15px;
             max-width: 400px;
-            word-wrap: break-word;
-            backdrop-filter: blur(10px);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            border-left: 4px solid #3498db;
         }
         
-        .attachment-toast-fixed.show {
+        .attachment-toast.show {
             transform: translateX(0);
         }
         
-        .attachment-toast-fixed.success {
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
-            border-left: 4px solid #1e8449;
+        .attachment-toast.success {
+            border-left-color: #27ae60;
         }
         
-        .attachment-toast-fixed.error {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            border-left: 4px solid #a93226;
+        .attachment-toast.success .toast-icon {
+            color: #27ae60;
         }
         
-        .attachment-toast-fixed.warning {
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-            border-left: 4px solid #d68910;
+        .attachment-toast.error {
+            border-left-color: #e74c3c;
         }
         
-        .attachment-toast-fixed.info {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            border-left: 4px solid #2471a3;
+        .attachment-toast.error .toast-icon {
+            color: #e74c3c;
         }
         
-        .toast-icon-fixed {
-            font-size: 20px;
-            flex-shrink: 0;
+        .attachment-toast.warning {
+            border-left-color: #f39c12;
         }
         
-        .toast-message-fixed {
+        .attachment-toast.warning .toast-icon {
+            color: #f39c12;
+        }
+        
+        .toast-icon {
+            font-size: 16px;
+            color: #3498db;
+        }
+        
+        .toast-message {
             flex: 1;
             font-size: 14px;
-            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .toast-close {
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+        }
+        
+        /* تأثير السحب والإفلات للصفحة */
+        body.drag-over-page {
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        body.drag-over-page::after {
+            content: '📎 اسحب الملفات هنا للرفع';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(52, 152, 219, 0.9);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            z-index: 9999;
+            pointer-events: none;
         }
         
         /* تحسينات للهواتف */
         @media (max-width: 768px) {
-            .attachment-overlay {
-                padding: 10px;
+            .gallery-container {
+                width: 95%;
+                height: 90%;
             }
             
-            .attachment-container {
-                max-height: 95vh;
-                border-radius: 12px;
-            }
-            
-            .attachment-header {
-                padding: 16px;
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .attachment-actions {
-                justify-content: center;
-                gap: 8px;
-            }
-            
-            .attachment-btn {
-                flex: 1;
-                min-width: 90px;
-                padding: 8px 10px;
-                font-size: 12px;
-            }
-            
-            .attachment-toolbar {
-                padding: 12px 16px;
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .attachment-search {
-                min-width: auto;
-                margin-bottom: 10px;
-            }
-            
-            .attachment-content {
-                padding: 16px;
-            }
-            
-            .attachment-grid-fixed {
+            .gallery-grid {
                 grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-                gap: 15px;
+                gap: 10px;
             }
             
-            .file-card-fixed {
-                padding: 12px;
+            .gallery-item {
+                font-size: 11px;
             }
             
-            .file-thumbnail-fixed {
-                height: 80px;
+            .gallery-thumbnail {
+                height: 100px;
             }
             
-            .attachment-footer {
-                padding: 12px 16px;
-                flex-direction: column;
-                align-items: center;
+            .progress-container {
+                width: 90%;
+                padding: 20px;
             }
             
-            .attachment-stats {
-                gap: 15px;
-                font-size: 13px;
-            }
-            
-            .attachment-toast-fixed {
+            .attachment-toast {
                 right: 10px;
                 left: 10px;
                 max-width: none;
             }
             
-            .progress-container-fixed {
-                width: 300px;
-                padding: 20px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .attachment-grid-fixed {
-                grid-template-columns: 1fr 1fr;
-                gap: 12px;
-            }
-            
-            .file-card-fixed {
+            .viewer-content {
                 padding: 10px;
-            }
-            
-            .file-actions-fixed {
-                gap: 6px;
-            }
-            
-            .action-btn-fixed {
-                width: 30px;
-                height: 30px;
-                font-size: 11px;
             }
         }
     `;
@@ -2166,26 +1989,40 @@ function addAttachmentStylesFixed() {
 // تهيئة النظام عند تحميل الصفحة
 // ==============================
 document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        initializeAttachmentSystemFixed();
-    }, 2000);
+    // إضافة الأنماط فوراً
+    addAttachmentStyles();
+    
+    // تأخير التهيئة قليلاً للسماح للنظام الرئيسي بالتحميل
+    setTimeout(async () => {
+        await initializeAttachmentSystem();
+    }, 2500);
 });
 
 // ==============================
 // إتاحة الوظائف عالمياً
 // ==============================
-window.attachmentSystemFixed = {
-    open: openAttachmentManagerFixed,
-    close: closeAttachmentManagerFixed,
-    upload: handleFileUploadFixed,
-    download: downloadFileFixed,
-    delete: deleteFileFixed,
-    cleanup: cleanupStorageFixed,
-    stats: storageStats,
-    settings: currentAttachmentSettings
+window.attachmentSystem = {
+    open: openAttachmentGallery,
+    openByType: openAttachmentsByType,
+    upload: handleFileUpload,
+    download: downloadFile,
+    preview: previewFile,
+    delete: deleteFileFromGallery,
+    isReady: () => isInitialized,
+    settings: currentAttachmentSettings,
+    cache: attachmentsCache
 };
 
-console.log('📎✨ تم تحميل نظام إدارة المرفقات المحسن بنجاح!');
-console.log('🔧 معالجة محسنة للأخطاء وإدارة ذكية للذاكرة');
-console.log('💾 ضغط تلقائي وتوفير مساحة التخزين');
-console.log('🧹 تنظيف تلقائي ونسخ احتياطي آمن');
+// ==============================
+// معالج الأخطاء العام
+// ==============================
+window.addEventListener('error', function(e) {
+    if (e.filename && e.filename.includes('attachments-manager')) {
+        console.error('❌ خطأ في نظام المرفقات:', e.error);
+        showAttachmentToast('حدث خطأ في نظام المرفقات', 'error');
+    }
+});
+
+console.log('🎉 تم تحميل نظام إدارة المرفقات المحسن بنجاح!');
+console.log('📎 استخدم Ctrl+U لرفع ملفات سريع');
+console.log('🖼️ استخدم Ctrl+G لفتح معرض المرفقات');
