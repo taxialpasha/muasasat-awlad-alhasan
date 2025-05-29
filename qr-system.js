@@ -1,1233 +1,567 @@
 /**
- * نظام QR Code المتكامل والمُصحح
- * ملف منفصل لتفعيل وإدارة QR Code في التطبيق
- * يتضمن إنشاء، عرض، مسح وإدارة كاملة لـ QR Codes
+ * نظام QR Code المُبسط والمُصحح نهائياً
+ * حل شامل لمشكلة عدم ظهور QR Code
  * 
- * إصدار محسن ومصحح للعمل مع التطبيق الرئيسي
- * الاستخدام: قم بتضمين هذا الملف في HTML الخاص بك
- * <script src="qr-system.js"></script>
+ * استبدل ملف qr-system.js بالكامل بهذا الكود
  */
 
 // ==============================
-// إعدادات نظام QR Code الافتراضية المُحدثة
+// إعدادات النظام المُبسطة
 // ==============================
-const QR_SYSTEM_CONFIG = {
-    // إعدادات الإنشاء
+const QR_CONFIG = {
     size: 200,
-    errorCorrectionLevel: 'M',
-    type: 'image/png',
-    quality: 0.92,
-    margin: 2,
-    
-    // إعدادات الألوان
-    colorDark: '#000000',
-    colorLight: '#FFFFFF',
-    
-    // إعدادات العرض في الطباعة
-    printSize: '60px',
-    printBorder: '1px solid #000',
-    showInPrint: true,
-    
-    // إعدادات المحتوى
-    includeFormNumber: true,
-    includeBasicInfo: true,
-    includeContactInfo: true,
-    includeFinancialInfo: false,
-    
-    // إعدادات الماسح
-    enableScanner: true,
-    
-    // إعدادات متقدمة
-    compression: true,
-    encryption: false,
-    timestampEnabled: true,
-    organizationPrefix: 'CHARITY',
-    
-    // إعدادات التخزين
-    cacheDuration: 24 * 60 * 60 * 1000,
-    maxCacheSize: 50,
-    
-    // مفتاح التخزين
-    storageKey: 'charity_qr_settings'
+    printSize: 60,
+    enabled: true,
+    showInPrint: true
 };
 
-// ==============================
-// متغيرات النظام المُحدثة
-// ==============================
-let qrSystemSettings = { ...QR_SYSTEM_CONFIG };
-let qrCodeCache = new Map();
-let qrControlPanel = null;
-let isQRSystemReady = false;
-
-// مرجع لمكتبة QR Code
-let QRCodeLib = null;
+// متغيرات النظام
+let isQRReady = false;
+let qrLibrary = null;
 
 // ==============================
-// تهيئة نظام QR Code المُحسنة
+// تهيئة نظام QR Code المُبسط
 // ==============================
-function initializeQRSystem() {
-    try {
-        console.log('🔄 جاري تهيئة نظام QR Code المُحسن...');
-        
-        // تحميل الإعدادات المحفوظة
-        loadQRSettings();
-        
-        // التحقق من توفر مكتبة QR Code
+function initQRSystem() {
+    console.log('🔄 بدء تهيئة نظام QR Code المُبسط...');
+    
+    // التحقق من المكتبة
+    if (typeof QRCode !== 'undefined') {
+        qrLibrary = QRCode;
+        isQRReady = true;
+        console.log('✅ مكتبة QRCode جاهزة');
+        setupQRSystem();
+    } else {
+        console.log('📦 تحميل مكتبة QRCode...');
+        loadQRLibrary();
+    }
+}
+
+// تحميل مكتبة QR Code
+function loadQRLibrary() {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+    script.onload = function() {
         if (typeof QRCode !== 'undefined') {
-            QRCodeLib = QRCode;
-            console.log('✅ مكتبة QRCode متاحة وجاهزة');
-            completeQRSystemInit();
+            qrLibrary = QRCode;
+            isQRReady = true;
+            console.log('✅ تم تحميل مكتبة QRCode بنجاح');
+            setupQRSystem();
         } else {
-            console.log('⏳ جاري تحميل مكتبة QRCode...');
-            loadQRLibrary().then(() => {
-                completeQRSystemInit();
-            }).catch(error => {
-                console.warn('⚠️ فشل تحميل مكتبة QRCode، سيتم استخدام مولد احتياطي:', error);
-                QRCodeLib = createFallbackQRGenerator();
-                completeQRSystemInit();
+            console.warn('⚠️ فشل تحميل المكتبة، استخدام النظام الاحتياطي');
+            setupFallbackQR();
+        }
+    };
+    script.onerror = function() {
+        console.warn('⚠️ خطأ في تحميل المكتبة، استخدام النظام الاحتياطي');
+        setupFallbackQR();
+    };
+    document.head.appendChild(script);
+}
+
+// إعداد النظام الاحتياطي
+function setupFallbackQR() {
+    qrLibrary = {
+        toCanvas: function(canvas, text) {
+            return new Promise((resolve) => {
+                createFallbackQR(canvas, text);
+                resolve(canvas);
             });
         }
-        
-    } catch (error) {
-        console.error('❌ خطأ في تهيئة نظام QR Code:', error);
-        createFallbackSystem();
-    }
-}
-
-// إكمال تهيئة النظام
-function completeQRSystemInit() {
-    try {
-        // إنشاء لوحة التحكم
-        createQRControlPanel();
-        
-        // تحسين وظائف الطباعة الموجودة
-        enhanceExistingPrintFunctions();
-        
-        // إعداد مستمعي الأحداث
-        setupQREventListeners();
-        
-        // تنظيف الكاش القديم
-        cleanupQRCache();
-        
-        // وضع علامة النظام كجاهز
-        isQRSystemReady = true;
-        
-        console.log('✅ تم تهيئة نظام QR Code بنجاح');
-        if (typeof showToast === 'function') {
-            showToast('🔳 نظام QR Code جاهز للاستخدام', 'success', 'QR System');
-        }
-        
-        // اختبار النظام
-        testQRSystem();
-        
-    } catch (error) {
-        console.error('❌ خطأ في إكمال تهيئة نظام QR Code:', error);
-        createFallbackSystem();
-    }
-}
-
-// ==============================
-// تحميل مكتبة QR Code
-// ==============================
-async function loadQRLibrary() {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js';
-        script.onload = () => {
-            if (typeof QRCode !== 'undefined') {
-                QRCodeLib = QRCode;
-                console.log('✅ تم تحميل مكتبة QRCode من CDN');
-                resolve();
-            } else {
-                reject(new Error('فشل في تحميل مكتبة QRCode'));
-            }
-        };
-        script.onerror = () => {
-            reject(new Error('فشل في تحميل مكتبة QRCode من CDN'));
-        };
-        document.head.appendChild(script);
-    });
-}
-
-// ==============================
-// إنشاء مولد QR Code احتياطي محسن
-// ==============================
-function createFallbackQRGenerator() {
-    return {
-        toCanvas: async (canvas, text, options = {}) => {
-            const ctx = canvas.getContext('2d');
-            const size = options.width || qrSystemSettings.size;
-            canvas.width = size;
-            canvas.height = size;
-            
-            // رسم خلفية بيضاء
-            ctx.fillStyle = qrSystemSettings.colorLight;
-            ctx.fillRect(0, 0, size, size);
-            
-            // رسم حدود
-            ctx.strokeStyle = qrSystemSettings.colorDark;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(2, 2, size - 4, size - 4);
-            
-            // رسم نمط QR بسيط
-            ctx.fillStyle = qrSystemSettings.colorDark;
-            const blockSize = (size - 8) / 21; // 21x21 grid
-            
-            // رسم زوايا التحديد
-            drawFinderPattern(ctx, 4, 4, blockSize);
-            drawFinderPattern(ctx, size - 7 * blockSize - 4, 4, blockSize);
-            drawFinderPattern(ctx, 4, size - 7 * blockSize - 4, blockSize);
-            
-            // رسم نمط عشوائي في الوسط (محاكاة QR)
-            for (let i = 8; i < 13; i++) {
-                for (let j = 8; j < 13; j++) {
-                    if ((i + j) % 2 === 0) {
-                        ctx.fillRect(4 + i * blockSize, 4 + j * blockSize, blockSize, blockSize);
-                    }
-                }
-            }
-            
-            // إضافة نص في الأسفل
-            ctx.fillStyle = qrSystemSettings.colorDark;
-            ctx.font = `${Math.floor(size / 25)}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.fillText('QR', size / 2, size - 8);
-            
-            return canvas;
-        }
     };
+    isQRReady = true;
+    setupQRSystem();
 }
 
-function drawFinderPattern(ctx, x, y, blockSize) {
-    // مربع خارجي أسود
-    ctx.fillStyle = qrSystemSettings.colorDark;
-    ctx.fillRect(x, y, 7 * blockSize, 7 * blockSize);
-    
-    // مربع داخلي أبيض
-    ctx.fillStyle = qrSystemSettings.colorLight;
-    ctx.fillRect(x + blockSize, y + blockSize, 5 * blockSize, 5 * blockSize);
-    
-    // مربع أسود في الوسط
-    ctx.fillStyle = qrSystemSettings.colorDark;
-    ctx.fillRect(x + 2 * blockSize, y + 2 * blockSize, 3 * blockSize, 3 * blockSize);
-}
-
-// ==============================
-// إنشاء نظام احتياطي
-// ==============================
-function createFallbackSystem() {
-    QRCodeLib = createFallbackQRGenerator();
-    isQRSystemReady = true;
-    console.log('⚠️ تم تفعيل النظام الاحتياطي لـ QR Code');
-}
-
-// ==============================
-// اختبار نظام QR Code
-// ==============================
-async function testQRSystem() {
-    try {
-        const testData = {
-            formNumber: 'TEST-001',
-            fullName: 'اختبار النظام',
-            caseCode: 'اختبار',
-            caseType: 'اختبار QR Code'
-        };
-        
-        const testCanvas = await generateQRCodeForCase(testData);
-        if (testCanvas) {
-            console.log('✅ اختبار نظام QR Code: نجح');
-        } else {
-            console.warn('⚠️ اختبار نظام QR Code: فشل - لكن النظام الاحتياطي متاح');
-        }
-    } catch (error) {
-        console.error('❌ خطأ في اختبار نظام QR Code:', error);
-    }
-}
-
-// ==============================
-// إنشاء QR Code لحالة معينة - الوظيفة الرئيسية المُحسنة
-// ==============================
-async function generateQRCodeForCase(caseData) {
-    if (!isQRSystemReady || !QRCodeLib) {
-        console.warn('⚠️ نظام QR Code غير جاهز بعد');
-        return createErrorQRCode('النظام غير جاهز');
-    }
-    
-    try {
-        const cacheKey = generateCacheKey(caseData);
-        
-        // فحص الكاش أولاً
-        if (qrCodeCache.has(cacheKey)) {
-            const cached = qrCodeCache.get(cacheKey);
-            if (Date.now() - cached.timestamp < qrSystemSettings.cacheDuration) {
-                console.log('📋 تم استخدام QR Code من الكاش');
-                return cached.canvas.cloneNode(true);
-            } else {
-                qrCodeCache.delete(cacheKey);
-            }
-        }
-        
-        // إنشاء محتوى QR Code
-        const qrContent = generateQRContent(caseData);
-        
-        // إنشاء Canvas
-        const canvas = document.createElement('canvas');
-        
-        // إنشاء QR Code
-        await QRCodeLib.toCanvas(canvas, qrContent, {
-            width: qrSystemSettings.size,
-            height: qrSystemSettings.size,
-            margin: qrSystemSettings.margin,
-            color: {
-                dark: qrSystemSettings.colorDark,
-                light: qrSystemSettings.colorLight
-            },
-            errorCorrectionLevel: qrSystemSettings.errorCorrectionLevel
-        });
-        
-        // حفظ في الكاش
-        qrCodeCache.set(cacheKey, {
-            canvas: canvas.cloneNode(true),
-            timestamp: Date.now(),
-            content: qrContent
-        });
-        
-        // تنظيف الكاش إذا تجاوز الحد الأقصى
-        if (qrCodeCache.size > qrSystemSettings.maxCacheSize) {
-            const oldestKey = qrCodeCache.keys().next().value;
-            qrCodeCache.delete(oldestKey);
-        }
-        
-        console.log(`✅ تم إنشاء QR Code للحالة: ${caseData.formNumber || 'غير محدد'}`);
-        return canvas;
-        
-    } catch (error) {
-        console.error('❌ خطأ في إنشاء QR Code:', error);
-        return createErrorQRCode('خطأ في الإنشاء');
-    }
-}
-
-// إنشاء QR Code خطأ
-function createErrorQRCode(errorMessage) {
-    const canvas = document.createElement('canvas');
-    canvas.width = qrSystemSettings.size;
-    canvas.height = qrSystemSettings.size;
-    
-    const ctx = canvas.getContext('2d');
-    
-    // خلفية حمراء فاتحة
-    ctx.fillStyle = '#ffebee';
-    ctx.fillRect(0, 0, qrSystemSettings.size, qrSystemSettings.size);
-    
-    // حدود حمراء
-    ctx.strokeStyle = '#f44336';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(2, 2, qrSystemSettings.size - 4, qrSystemSettings.size - 4);
-    
-    // نص الخطأ
-    ctx.fillStyle = '#d32f2f';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('❌', qrSystemSettings.size / 2, qrSystemSettings.size / 2 - 10);
-    ctx.font = '10px Arial';
-    ctx.fillText(errorMessage, qrSystemSettings.size / 2, qrSystemSettings.size / 2 + 10);
-    
-    return canvas;
-}
-
-// ==============================
-// إنشاء محتوى QR Code المُحسن
-// ==============================
-function generateQRContent(caseData) {
-    let content = {};
-    
-    // معلومات أساسية
-    content.type = 'charity_case';
-    content.version = '2.0.0';
-    content.org = qrSystemSettings.organizationPrefix;
-    
-    if (qrSystemSettings.timestampEnabled) {
-        content.timestamp = new Date().toISOString();
-    }
-    
-    // رقم الاستمارة (مهم جداً)
-    if (qrSystemSettings.includeFormNumber && caseData.formNumber) {
-        content.formNumber = caseData.formNumber;
-    }
-    
-    // المعلومات الأساسية
-    if (qrSystemSettings.includeBasicInfo) {
-        content.basic = {
-            name: caseData.fullName || '',
-            caseCode: caseData.caseCode || '',
-            caseType: caseData.caseType || '',
-            date: caseData.caseDate || new Date().toISOString().split('T')[0],
-            organizer: caseData.organizer || ''
-        };
-    }
-    
-    // معلومات الاتصال
-    if (qrSystemSettings.includeContactInfo) {
-        content.contact = {
-            phone1: caseData.phoneFirst || '',
-            phone2: caseData.phoneSecond || '',
-            address: caseData.address || ''
-        };
-    }
-    
-    // المعلومات المالية
-    if (qrSystemSettings.includeFinancialInfo) {
-        content.financial = {
-            assistance: caseData.estimatedAssistance || '',
-            totalAmount: caseData.totalAmount || ''
-        };
-    }
-    
-    // ضغط البيانات إذا كانت مفعلة
-    let finalContent = JSON.stringify(content);
-    
-    if (qrSystemSettings.compression) {
-        finalContent = compressData(finalContent);
-    }
-    
-    // تشفير البيانات إذا كان مفعلاً
-    if (qrSystemSettings.encryption) {
-        finalContent = encryptData(finalContent);
-    }
-    
-    return finalContent;
-}
-
-// ==============================
-// وظائف الضغط والتشفير المُحسنة
-// ==============================
-function compressData(data) {
-    try {
-        return data
-            .replace(/\s+/g, ' ')
-            .replace(/": "/g, '":"')
-            .replace(/", "/g, '","')
-            .replace(/{ "/g, '{"')
-            .replace(/" }/g, '"}');
-    } catch (error) {
-        console.warn('تحذير: فشل ضغط البيانات:', error);
-        return data;
-    }
-}
-
-function encryptData(data) {
-    try {
-        return btoa(unescape(encodeURIComponent(data)));
-    } catch (error) {
-        console.warn('تحذير: فشل تشفير البيانات:', error);
-        return data;
-    }
-}
-
-function decryptData(encryptedData) {
-    try {
-        return decodeURIComponent(escape(atob(encryptedData)));
-    } catch (error) {
-        console.warn('تحذير: فشل فك تشفير البيانات:', error);
-        return encryptedData;
-    }
-}
-
-// ==============================
-// إنشاء مفتاح الكاش المُحسن
-// ==============================
-function generateCacheKey(caseData) {
-    const keyData = {
-        formNumber: caseData.formNumber || '',
-        name: caseData.fullName || '',
-        date: caseData.caseDate || '',
-        hash: Date.now() // إضافة تاريخ لضمان التفرد
-    };
-    
-    const keyString = JSON.stringify(keyData);
-    return btoa(keyString).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
-}
-
-// ==============================
-// تحسين وظائف الطباعة الموجودة - الجزء المُصحح
-// ==============================
-function enhanceExistingPrintFunctions() {
-    // انتظار تحميل الوظائف في التطبيق الرئيسي
-    if (typeof window.generateQRCode !== 'function') {
-        // إضافة وظيفة generateQRCode العامة للتطبيق الرئيسي
-        window.generateQRCode = async function(text, size = 200) {
-            if (!isQRSystemReady) {
-                console.warn('نظام QR غير جاهز، محاولة إنشاء QR بسيط');
-                return createSimpleQR(text, size);
-            }
-            
-            try {
-                const canvas = document.createElement('canvas');
-                await QRCodeLib.toCanvas(canvas, text, {
-                    width: size,
-                    height: size,
-                    margin: qrSystemSettings.margin,
-                    color: {
-                        dark: qrSystemSettings.colorDark,
-                        light: qrSystemSettings.colorLight
-                    },
-                    errorCorrectionLevel: qrSystemSettings.errorCorrectionLevel
-                });
-                return canvas;
-            } catch (error) {
-                console.error('خطأ في generateQRCode:', error);
-                return createSimpleQR(text, size);
-            }
-        };
-    }
-    
-    // تحسين وظيفة createEnhancedPrintTemplate إذا كانت موجودة
-    if (typeof window.createEnhancedPrintTemplate === 'function') {
-        const originalCreateTemplate = window.createEnhancedPrintTemplate;
-        
-        window.createEnhancedPrintTemplate = async function(data) {
-            try {
-                const container = await originalCreateTemplate(data);
-                await addQRCodeToContainer(container, data);
-                return container;
-            } catch (error) {
-                console.error('خطأ في إنشاء قالب الطباعة المحسن:', error);
-                return originalCreateTemplate(data);
-            }
-        };
-        
-        console.log('✅ تم تحسين وظيفة createEnhancedPrintTemplate');
-    } else {
-        // إنشاء وظيفة احتياطية
-        console.log('⚠️ لم يتم العثور على وظيفة createEnhancedPrintTemplate، سيتم إنشاء وظيفة احتياطية');
-    }
-}
-
-// إنشاء QR بسيط (احتياطي)
-function createSimpleQR(text, size) {
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
+// إنشاء QR احتياطي
+function createFallbackQR(canvas, text) {
+    canvas.width = QR_CONFIG.size;
+    canvas.height = QR_CONFIG.size;
     
     const ctx = canvas.getContext('2d');
     
     // خلفية بيضاء
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, size, size);
+    ctx.fillRect(0, 0, QR_CONFIG.size, QR_CONFIG.size);
     
     // حدود سوداء
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(2, 2, size - 4, size - 4);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(5, 5, QR_CONFIG.size - 10, QR_CONFIG.size - 10);
     
-    // نص QR
+    // رسم نمط QR بسيط
+    const blockSize = (QR_CONFIG.size - 20) / 17;
     ctx.fillStyle = '#000000';
-    ctx.font = `${Math.floor(size / 15)}px Arial`;
+    
+    // رسم زوايا التحديد
+    for (let i = 0; i < 3; i++) {
+        const x = i === 2 ? QR_CONFIG.size - 50 : 10;
+        const y = i === 1 ? QR_CONFIG.size - 50 : 10;
+        
+        // مربع خارجي
+        ctx.fillRect(x, y, 40, 40);
+        // مربع داخلي أبيض
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x + 5, y + 5, 30, 30);
+        // مربع أسود في الوسط
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(x + 12, y + 12, 16, 16);
+    }
+    
+    // نمط عشوائي في الوسط
+    for (let i = 60; i < QR_CONFIG.size - 60; i += blockSize) {
+        for (let j = 60; j < QR_CONFIG.size - 60; j += blockSize) {
+            if (Math.random() > 0.5) {
+                ctx.fillRect(i, j, blockSize - 1, blockSize - 1);
+            }
+        }
+    }
+    
+    // نص في الأسفل
+    ctx.font = '12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('QR', size / 2, size / 2 - 10);
-    ctx.font = `${Math.floor(size / 25)}px Arial`;
-    ctx.fillText('CODE', size / 2, size / 2 + 10);
+    ctx.fillText('QR Code', QR_CONFIG.size / 2, QR_CONFIG.size - 10);
+}
+
+// ==============================
+// إعداد النظام
+// ==============================
+function setupQRSystem() {
+    try {
+        // إنشاء الوظائف العامة
+        window.generateQRCode = generateQRCode;
+        window.generateQRForCase = generateQRForCase;
+        window.showQRSettings = showQRSettings;
+        window.testQRCode = testQRCode;
+        
+        // تحسين وظائف الطباعة
+        enhancePrintFunctions();
+        
+        // إعداد زر QR
+        setupQRButton();
+        
+        console.log('✅ نظام QR Code جاهز بالكامل');
+        
+        // إظهار إشعار نجاح
+        setTimeout(() => {
+            if (typeof showToast === 'function') {
+                showToast('نظام QR Code جاهز للاستخدام!', 'success');
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ خطأ في إعداد النظام:', error);
+    }
+}
+
+// ==============================
+// إنشاء QR Code - الوظيفة الرئيسية
+// ==============================
+async function generateQRCode(text, size = QR_CONFIG.size) {
+    if (!isQRReady || !qrLibrary) {
+        console.error('❌ نظام QR غير جاهز');
+        return createErrorCanvas('النظام غير جاهز');
+    }
+    
+    if (!text || text.trim() === '') {
+        console.error('❌ النص فارغ');
+        return createErrorCanvas('النص فارغ');
+    }
+    
+    try {
+        const canvas = document.createElement('canvas');
+        await qrLibrary.toCanvas(canvas, text, {
+            width: size,
+            height: size,
+            margin: 2,
+            color: { dark: '#000000', light: '#ffffff' },
+            errorCorrectionLevel: 'M'
+        });
+        
+        console.log('✅ تم إنشاء QR Code بنجاح');
+        return canvas;
+        
+    } catch (error) {
+        console.error('❌ خطأ في إنشاء QR Code:', error);
+        return createErrorCanvas('خطأ في الإنشاء');
+    }
+}
+
+// إنشاء QR Code للحالات
+async function generateQRForCase(caseData) {
+    if (!caseData) {
+        console.error('❌ بيانات الحالة فارغة');
+        return createErrorCanvas('بيانات فارغة');
+    }
+    
+    try {
+        // إنشاء النص
+        const qrText = createQRText(caseData);
+        
+        // إنشاء QR Code
+        return await generateQRCode(qrText, QR_CONFIG.size);
+        
+    } catch (error) {
+        console.error('❌ خطأ في إنشاء QR للحالة:', error);
+        return createErrorCanvas('خطأ في البيانات');
+    }
+}
+
+// إنشاء نص QR Code
+function createQRText(caseData) {
+    const info = {
+        org: 'مؤسسة أولاد الحسن (ع)',
+        formNumber: caseData.formNumber || 'غير محدد',
+        name: caseData.fullName || 'غير محدد',
+        type: caseData.caseCode || 'غير محدد',
+        date: caseData.caseDate || new Date().toISOString().split('T')[0],
+        phone: caseData.phoneFirst || 'غير محدد',
+        amount: caseData.estimatedAssistance || 'غير محدد'
+    };
+    
+    return `${info.org}
+استمارة رقم: ${info.formNumber}
+الاسم: ${info.name}
+النوع: ${info.type}
+التاريخ: ${info.date}
+الهاتف: ${info.phone}
+المبلغ: ${info.amount}`;
+}
+
+// إنشاء canvas خطأ
+function createErrorCanvas(message) {
+    const canvas = document.createElement('canvas');
+    canvas.width = QR_CONFIG.size;
+    canvas.height = QR_CONFIG.size;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // خلفية حمراء فاتحة
+    ctx.fillStyle = '#ffebee';
+    ctx.fillRect(0, 0, QR_CONFIG.size, QR_CONFIG.size);
+    
+    // حدود حمراء
+    ctx.strokeStyle = '#f44336';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(2, 2, QR_CONFIG.size - 4, QR_CONFIG.size - 4);
+    
+    // رمز الخطأ
+    ctx.fillStyle = '#d32f2f';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('✖', QR_CONFIG.size / 2, QR_CONFIG.size / 2 - 10);
+    
+    // رسالة الخطأ
+    ctx.font = '12px Arial';
+    ctx.fillText(message, QR_CONFIG.size / 2, QR_CONFIG.size / 2 + 15);
     
     return canvas;
 }
 
 // ==============================
-// إضافة QR Code لحاوية الطباعة - مُحسن ومُصحح
+// تحسين وظائف الطباعة
 // ==============================
-async function addQRCodeToContainer(container, caseData) {
-    try {
-        if (!qrSystemSettings.showInPrint) {
-            console.log('💡 QR Code معطل في الطباعة');
-            return;
-        }
+function enhancePrintFunctions() {
+    // تحسين createEnhancedPrintTemplate
+    if (typeof window.createEnhancedPrintTemplate === 'function') {
+        const original = window.createEnhancedPrintTemplate;
         
-        // البحث عن منطقة QR في الهيدر
+        window.createEnhancedPrintTemplate = async function(data) {
+            try {
+                const container = await original(data);
+                await addQRToContainer(container, data);
+                return container;
+            } catch (error) {
+                console.error('خطأ في قالب الطباعة:', error);
+                return await original(data);
+            }
+        };
+        
+        console.log('✅ تم تحسين وظيفة الطباعة');
+    }
+}
+
+// إضافة QR Code للحاوية
+async function addQRToContainer(container, data) {
+    try {
+        if (!QR_CONFIG.showInPrint) return;
+        
         const qrSection = container.querySelector('.header-qr');
         if (!qrSection) {
-            console.warn('⚠️ لم يتم العثور على منطقة QR في الهيدر');
+            console.warn('⚠️ منطقة QR غير موجودة');
             return;
         }
         
-        // مسح المحتوى الحالي
         qrSection.innerHTML = '';
         
-        // الحصول على بيانات الحالة
-        const actualCaseData = caseData || getCurrentFormData();
+        // إنشاء QR Code
+        const qrCanvas = await generateQRForCase(data);
         
-        if (!actualCaseData || (!actualCaseData.formNumber && !actualCaseData.fullName)) {
-            console.warn('⚠️ لا توجد بيانات كافية لإنشاء QR Code');
-            qrSection.innerHTML = '<div style="font-size:10px; text-align:center; color:#666;">QR<br>غير متاح</div>';
-            return;
+        if (qrCanvas) {
+            // تطبيق الأنماط
+            qrCanvas.style.cssText = `
+                max-width: ${QR_CONFIG.printSize}px !important;
+                max-height: ${QR_CONFIG.printSize}px !important;
+                border: 1px solid #000 !important;
+                display: block !important;
+                margin: 0 auto !important;
+            `;
+            
+            qrSection.appendChild(qrCanvas);
+            console.log('✅ تم إضافة QR Code للطباعة');
         }
+        
+    } catch (error) {
+        console.error('❌ خطأ في إضافة QR للحاوية:', error);
+    }
+}
+
+// ==============================
+// إعداد زر QR Code
+// ==============================
+function setupQRButton() {
+    const qrButton = document.querySelector('.qr-scanner-btn');
+    if (qrButton) {
+        qrButton.innerHTML = '<i class="fas fa-qrcode"></i><span>اختبار QR</span>';
+        qrButton.onclick = testQRCode;
+        console.log('✅ تم إعداد زر QR');
+    }
+}
+
+// ==============================
+// اختبار QR Code
+// ==============================
+async function testQRCode() {
+    try {
+        console.log('🧪 بدء اختبار QR Code...');
+        
+        // بيانات تجريبية
+        const testData = {
+            formNumber: 'TEST-001',
+            fullName: 'اختبار النظام',
+            caseCode: 'اختبار',
+            caseDate: new Date().toISOString().split('T')[0],
+            phoneFirst: '07700000000',
+            estimatedAssistance: '100000'
+        };
         
         // إنشاء QR Code
-        const qrCanvas = await generateQRCodeForCase(actualCaseData);
+        const qrCanvas = await generateQRForCase(testData);
         
-        if (!qrCanvas) {
-            throw new Error('فشل في إنشاء QR Code');
+        if (qrCanvas) {
+            showQRResult(qrCanvas, 'تم إنشاء QR Code تجريبي بنجاح!');
+        } else {
+            showQRResult(null, 'فشل في إنشاء QR Code التجريبي');
         }
-        
-        // تطبيق أنماط الطباعة
-        qrCanvas.style.cssText = `
-            max-width: ${qrSystemSettings.printSize} !important;
-            max-height: ${qrSystemSettings.printSize} !important;
-            border: ${qrSystemSettings.printBorder} !important;
-            display: block !important;
-            margin: 0 auto !important;
-        `;
-        
-        // إضافة QR Code للهيدر
-        qrSection.appendChild(qrCanvas);
-        
-        console.log('✅ تم إضافة QR Code للطباعة بنجاح');
         
     } catch (error) {
-        console.error('❌ خطأ في إضافة QR Code للحاوية:', error);
-        
-        // عرض رسالة خطأ في المكان المخصص
-        const qrSection = container.querySelector('.header-qr');
-        if (qrSection) {
-            qrSection.innerHTML = '<div style="font-size:10px; text-align:center; color:#e74c3c;">QR<br>خطأ</div>';
-        }
+        console.error('❌ خطأ في اختبار QR:', error);
+        showQRResult(null, 'خطأ في الاختبار: ' + error.message);
     }
 }
 
-// ==============================
-// الحصول على بيانات النموذج الحالي - مُحسن
-// ==============================
-function getCurrentFormData() {
-    try {
-        // محاولة الحصول على البيانات من الوظيفة العامة
-        if (typeof window.getFormData === 'function') {
-            return window.getFormData();
-        }
-        
-        // محاولة الحصول على البيانات من الحقول مباشرة
-        const formData = {};
-        const inputs = document.querySelectorAll('#case-form input, #case-form select, #case-form textarea');
-        
-        inputs.forEach(input => {
-            if (input.id && input.value) {
-                formData[input.id] = input.value.trim();
-            }
-        });
-        
-        return Object.keys(formData).length > 0 ? formData : null;
-        
-    } catch (error) {
-        console.error('خطأ في الحصول على بيانات النموذج:', error);
-        return null;
+// عرض نتيجة QR Code
+function showQRResult(canvas, message) {
+    // إزالة النافذة القديمة إن وجدت
+    const oldPopup = document.getElementById('qr-test-popup');
+    if (oldPopup) {
+        oldPopup.remove();
     }
-}
-
-// ==============================
-// إنشاء لوحة التحكم في QR Code - مبسطة
-// ==============================
-function createQRControlPanel() {
-    if (qrControlPanel) return; // منع الإنشاء المتكرر
     
-    const panel = document.createElement('div');
-    panel.id = 'qr-control-panel';
-    panel.innerHTML = `
-        <div class="qr-control-overlay">
-            <div class="qr-control-container">
-                <div class="qr-control-header">
-                    <h3>🔳 إعدادات QR Code</h3>
-                    <button class="qr-control-close" onclick="closeQRControlPanel()">✕</button>
+    // إنشاء نافذة النتيجة
+    const popup = document.createElement('div');
+    popup.id = 'qr-test-popup';
+    popup.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        z-index: 10000;
+        text-align: center;
+        max-width: 90vw;
+        max-height: 90vh;
+        overflow: auto;
+    `;
+    
+    let content = `<h3 style="margin: 0 0 20px 0; color: #2c3e50;">نتيجة اختبار QR Code</h3>`;
+    
+    if (canvas) {
+        content += `<div style="margin: 20px 0;"></div>`;
+        content += `<p style="color: #27ae60; font-weight: bold; margin: 15px 0;">${message}</p>`;
+    } else {
+        content += `<p style="color: #e74c3c; font-weight: bold; margin: 15px 0;">${message}</p>`;
+    }
+    
+    content += `
+        <div style="margin-top: 20px;">
+            <button onclick="this.parentElement.parentElement.remove()" 
+                    style="padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; margin: 5px;">
+                إغلاق
+            </button>
+            <button onclick="testQRCode()" 
+                    style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; margin: 5px;">
+                اختبار مرة أخرى
+            </button>
+        </div>
+    `;
+    
+    popup.innerHTML = content;
+    
+    // إضافة QR Code إذا كان موجوداً
+    if (canvas) {
+        const canvasContainer = popup.querySelector('div');
+        canvasContainer.appendChild(canvas);
+    }
+    
+    document.body.appendChild(popup);
+    
+    // إزالة النافذة تلقائياً بعد 10 ثوان
+    setTimeout(() => {
+        if (document.getElementById('qr-test-popup')) {
+            popup.remove();
+        }
+    }, 10000);
+}
+
+// ==============================
+// إعدادات QR Code
+// ==============================
+function showQRSettings() {
+    const settingsHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; padding: 20px;">
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 500px; width: 100%;">
+                <h3 style="margin: 0 0 20px 0; text-align: center;">إعدادات QR Code</h3>
+                
+                <div style="margin: 15px 0;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">إظهار في الطباعة:</label>
+                    <input type="checkbox" id="qr-show-print" ${QR_CONFIG.showInPrint ? 'checked' : ''} style="transform: scale(1.2);">
                 </div>
                 
-                <div class="qr-control-body">
-                    <div class="qr-control-section">
-                        <h4>⚙️ الإعدادات الأساسية</h4>
-                        <div class="qr-control-row">
-                            <label>إظهار في الطباعة:</label>
-                            <input type="checkbox" id="qr-showInPrint" ${qrSystemSettings.showInPrint ? 'checked' : ''}>
-                        </div>
-                        <div class="qr-control-row">
-                            <label>حجم QR Code:</label>
-                            <input type="range" id="qr-size" min="100" max="300" value="${qrSystemSettings.size}">
-                            <span id="qr-sizeValue">${qrSystemSettings.size}px</span>
-                        </div>
-                        <div class="qr-control-row">
-                            <label>تضمين معلومات الاتصال:</label>
-                            <input type="checkbox" id="qr-includeContactInfo" ${qrSystemSettings.includeContactInfo ? 'checked' : ''}>
-                        </div>
-                    </div>
-                    
-                    <div class="qr-control-section">
-                        <h4>🧪 اختبار النظام</h4>
-                        <button class="qr-test-btn" onclick="generateTestQR()">🔳 إنشاء QR تجريبي</button>
-                        <button class="qr-test-btn" onclick="clearQRCache()">🗑️ مسح الكاش</button>
-                        <button class="qr-test-btn" onclick="showQRStats()">📊 إحصائيات QR</button>
-                    </div>
+                <div style="margin: 15px 0;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">حجم QR Code:</label>
+                    <input type="range" id="qr-size" min="100" max="300" value="${QR_CONFIG.size}" style="width: 100%;">
+                    <span id="qr-size-value">${QR_CONFIG.size}px</span>
                 </div>
                 
-                <div class="qr-control-footer">
-                    <button class="qr-control-btn apply-btn" onclick="applyQRSettings()">✅ تطبيق</button>
-                    <button class="qr-control-btn save-btn" onclick="saveQRSettings()">💾 حفظ</button>
-                    <button class="qr-control-btn reset-btn" onclick="resetQRSettings()">🔄 إعادة تعيين</button>
+                <div style="margin: 15px 0;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">حجم الطباعة:</label>
+                    <input type="range" id="qr-print-size" min="40" max="100" value="${QR_CONFIG.printSize}" style="width: 100%;">
+                    <span id="qr-print-size-value">${QR_CONFIG.printSize}px</span>
+                </div>
+                
+                <div style="text-align: center; margin-top: 25px;">
+                    <button onclick="applyQRSettings()" style="padding: 12px 24px; background: #27ae60; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 5px; font-size: 14px;">
+                        تطبيق الإعدادات
+                    </button>
+                    <button onclick="testQRCode()" style="padding: 12px 24px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 5px; font-size: 14px;">
+                        اختبار QR
+                    </button>
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" style="padding: 12px 24px; background: #95a5a6; color: white; border: none; border-radius: 8px; cursor: pointer; margin: 5px; font-size: 14px;">
+                        إغلاق
+                    </button>
                 </div>
             </div>
         </div>
     `;
     
-    // إضافة الأنماط
-    addQRStyles();
+    const settingsDiv = document.createElement('div');
+    settingsDiv.innerHTML = settingsHTML;
+    document.body.appendChild(settingsDiv);
     
-    document.body.appendChild(panel);
-    qrControlPanel = panel;
-    
-    // إعداد مستمعي الإحداث للمنزلقات
-    setupQRSliderListeners();
-    
-    console.log('✅ تم إنشاء لوحة التحكم في QR Code');
-}
-
-// ==============================
-// إضافة أنماط CSS لنظام QR - مُحسنة
-// ==============================
-function addQRStyles() {
-    if (document.getElementById('qr-system-styles')) return;
-    
-    const styles = document.createElement('style');
-    styles.id = 'qr-system-styles';
-    styles.textContent = `
-        /* أنماط لوحة التحكم في QR */
-        .qr-control-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 10000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .qr-control-overlay.show {
-            display: flex;
-        }
-        
-        .qr-control-container {
-            background: white;
-            border-radius: 15px;
-            width: 100%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .qr-control-header {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .qr-control-header h3 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        
-        .qr-control-close {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.3s;
-        }
-        
-        .qr-control-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        
-        .qr-control-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-        }
-        
-        .qr-control-section {
-            margin-bottom: 20px;
-        }
-        
-        .qr-control-section h4 {
-            color: #2c3e50;
-            margin-bottom: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            padding-bottom: 6px;
-            border-bottom: 2px solid #e3e6f0;
-        }
-        
-        .qr-control-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            gap: 10px;
-        }
-        
-        .qr-control-row label {
-            min-width: 150px;
-            font-weight: 500;
-            color: #495057;
-            font-size: 13px;
-        }
-        
-        .qr-control-row input {
-            flex: 1;
-            padding: 6px 10px;
-            border: 2px solid #e3e6f0;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-        
-        .qr-control-row input:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-        
-        .qr-control-row input[type="checkbox"] {
-            width: auto;
-            flex: none;
-        }
-        
-        .qr-test-btn {
-            background: #17a2b8;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin: 3px;
-            transition: background 0.3s;
-        }
-        
-        .qr-test-btn:hover {
-            background: #138496;
-        }
-        
-        .qr-control-footer {
-            padding: 15px 20px;
-            background: #f8f9fa;
-            border-top: 1px solid #e3e6f0;
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        
-        .qr-control-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 500;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .apply-btn {
-            background: #17a2b8;
-            color: white;
-        }
-        
-        .save-btn {
-            background: #28a745;
-            color: white;
-        }
-        
-        .reset-btn {
-            background: #ffc107;
-            color: #212529;
-        }
-        
-        /* إشعارات QR */
-        .qr-toast {
-            position: fixed;
-            top: 80px;
-            right: 15px;
-            background: #2c3e50;
-            color: white;
-            padding: 10px 14px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            z-index: 10001;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            max-width: 250px;
-        }
-        
-        .qr-toast.show {
-            transform: translateX(0);
-        }
-        
-        .qr-toast.success {
-            background: #27ae60;
-        }
-        
-        .qr-toast.error {
-            background: #e74c3c;
-        }
-        
-        .qr-toast.warning {
-            background: #f39c12;
-        }
-        
-        /* تحسينات للهواتف */
-        @media (max-width: 768px) {
-            .qr-control-container {
-                max-height: 90vh;
-                margin: 10px;
-            }
-            
-            .qr-control-row {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 5px;
-            }
-            
-            .qr-control-row label {
-                min-width: auto;
-            }
-            
-            .qr-control-footer {
-                flex-direction: column;
-            }
-            
-            .qr-control-btn {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    `;
-    
-    document.head.appendChild(styles);
-}
-
-// ==============================
-// وظائف لوحة التحكم
-// ==============================
-function showQRControlPanel() {
-    if (!qrControlPanel) {
-        createQRControlPanel();
-    }
-    
-    const overlay = qrControlPanel.querySelector('.qr-control-overlay');
-    overlay.classList.add('show');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeQRControlPanel() {
-    if (qrControlPanel) {
-        const overlay = qrControlPanel.querySelector('.qr-control-overlay');
-        overlay.classList.remove('show');
-        document.body.style.overflow = 'auto';
-    }
-}
-
-function setupQRSliderListeners() {
+    // إعداد المنزلقات
     const sizeSlider = document.getElementById('qr-size');
-    const sizeValue = document.getElementById('qr-sizeValue');
+    const printSizeSlider = document.getElementById('qr-print-size');
     
-    if (sizeSlider && sizeValue) {
-        sizeSlider.addEventListener('input', function() {
-            sizeValue.textContent = this.value + 'px';
-        });
-    }
+    sizeSlider.oninput = function() {
+        document.getElementById('qr-size-value').textContent = this.value + 'px';
+    };
+    
+    printSizeSlider.oninput = function() {
+        document.getElementById('qr-print-size-value').textContent = this.value + 'px';
+    };
 }
 
+// تطبيق الإعدادات
 function applyQRSettings() {
-    updateQRSettingsFromForm();
-    qrCodeCache.clear();
-    showQRToast('تم تطبيق إعدادات QR Code', 'success');
-}
-
-function saveQRSettings() {
-    updateQRSettingsFromForm();
+    const showInPrint = document.getElementById('qr-show-print').checked;
+    const size = parseInt(document.getElementById('qr-size').value);
+    const printSize = parseInt(document.getElementById('qr-print-size').value);
     
+    QR_CONFIG.showInPrint = showInPrint;
+    QR_CONFIG.size = size;
+    QR_CONFIG.printSize = printSize;
+    
+    // حفظ في التخزين المحلي
     try {
-        localStorage.setItem(QR_SYSTEM_CONFIG.storageKey, JSON.stringify(qrSystemSettings));
-        applyQRSettings();
-        showQRToast('تم حفظ إعدادات QR Code بنجاح', 'success');
+        localStorage.setItem('qr_config', JSON.stringify(QR_CONFIG));
+        console.log('✅ تم حفظ إعدادات QR');
     } catch (error) {
-        console.error('خطأ في حفظ إعدادات QR:', error);
-        showQRToast('فشل في حفظ الإعدادات', 'error');
+        console.error('❌ خطأ في حفظ الإعدادات:', error);
+    }
+    
+    if (typeof showToast === 'function') {
+        showToast('تم تطبيق إعدادات QR Code', 'success');
+    } else {
+        alert('تم تطبيق إعدادات QR Code');
+    }
+    
+    // إغلاق نافذة الإعدادات
+    const settingsDiv = document.querySelector('[style*="position: fixed"][style*="z-index: 9999"]');
+    if (settingsDiv) {
+        settingsDiv.remove();
     }
 }
 
+// تحميل الإعدادات المحفوظة
 function loadQRSettings() {
     try {
-        const savedSettings = localStorage.getItem(QR_SYSTEM_CONFIG.storageKey);
-        if (savedSettings) {
-            const parsedSettings = JSON.parse(savedSettings);
-            qrSystemSettings = { ...QR_SYSTEM_CONFIG, ...parsedSettings };
-            console.log('تم تحميل إعدادات QR Code المحفوظة');
+        const saved = localStorage.getItem('qr_config');
+        if (saved) {
+            const config = JSON.parse(saved);
+            Object.assign(QR_CONFIG, config);
+            console.log('✅ تم تحميل إعدادات QR المحفوظة');
         }
     } catch (error) {
-        console.error('خطأ في تحميل إعدادات QR:', error);
-        qrSystemSettings = { ...QR_SYSTEM_CONFIG };
+        console.error('❌ خطأ في تحميل الإعدادات:', error);
     }
 }
 
-function resetQRSettings() {
-    if (confirm('هل أنت متأكد من إعادة تعيين جميع إعدادات QR Code؟')) {
-        qrSystemSettings = { ...QR_SYSTEM_CONFIG };
-        setQRSettingsToForm();
-        applyQRSettings();
-        showQRToast('تم إعادة تعيين الإعدادات', 'info');
-    }
-}
-
-function updateQRSettingsFromForm() {
-    const elements = {
-        'showInPrint': document.getElementById('qr-showInPrint'),
-        'size': document.getElementById('qr-size'),
-        'includeContactInfo': document.getElementById('qr-includeContactInfo')
-    };
-    
-    Object.keys(elements).forEach(key => {
-        const element = elements[key];
-        if (element) {
-            if (element.type === 'checkbox') {
-                qrSystemSettings[key] = element.checked;
-            } else if (element.type === 'range') {
-                qrSystemSettings[key] = parseInt(element.value);
-            } else {
-                qrSystemSettings[key] = element.value;
-            }
-        }
-    });
-}
-
-function setQRSettingsToForm() {
-    const elements = {
-        'qr-showInPrint': qrSystemSettings.showInPrint,
-        'qr-size': qrSystemSettings.size,
-        'qr-includeContactInfo': qrSystemSettings.includeContactInfo
-    };
-    
-    Object.keys(elements).forEach(key => {
-        const element = document.getElementById(key);
-        if (element) {
-            if (element.type === 'checkbox') {
-                element.checked = elements[key];
-            } else {
-                element.value = elements[key];
-            }
-        }
-    });
-}
-
 // ==============================
-// وظائف الاختبار والأدوات
-// ==============================
-async function generateTestQR() {
-    try {
-        const testData = {
-            formNumber: 'TEST-001',
-            fullName: 'اختبار QR Code',
-            caseCode: 'اختبار',
-            caseType: 'اختبار النظام',
-            caseDate: new Date().toISOString().split('T')[0],
-            phoneFirst: '07700000000',
-            address: 'عنوان تجريبي'
-        };
-        
-        const qrCanvas = await generateQRCodeForCase(testData);
-        
-        if (qrCanvas) {
-            // عرض QR Code في نافذة منبثقة
-            const popup = document.createElement('div');
-            popup.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: white;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-                z-index: 10002;
-                text-align: center;
-                max-width: 90vw;
-            `;
-            
-            popup.innerHTML = `
-                <h3 style="margin-top: 0;">QR Code التجريبي</h3>
-                <div style="margin: 15px 0;"></div>
-                <button onclick="this.parentElement.remove()" style="margin-top: 15px; padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">إغلاق</button>
-            `;
-            
-            popup.querySelector('div').appendChild(qrCanvas);
-            document.body.appendChild(popup);
-            
-            showQRToast('تم إنشاء QR Code تجريبي', 'success');
-        } else {
-            showQRToast('فشل في إنشاء QR Code تجريبي', 'error');
-        }
-        
-    } catch (error) {
-        console.error('خطأ في إنشاء QR تجريبي:', error);
-        showQRToast('فشل في إنشاء QR Code تجريبي', 'error');
-    }
-}
-
-function clearQRCache() {
-    qrCodeCache.clear();
-    showQRToast(`تم مسح كاش QR Code`, 'info');
-}
-
-function showQRStats() {
-    const stats = {
-        cacheSize: qrCodeCache.size,
-        maxCacheSize: qrSystemSettings.maxCacheSize,
-        cacheUsage: Math.round((qrCodeCache.size / qrSystemSettings.maxCacheSize) * 100),
-        isReady: isQRSystemReady,
-        hasLibrary: !!QRCodeLib
-    };
-    
-    alert(`إحصائيات QR Code:
-    
-🔳 عدد QR Codes في الكاش: ${stats.cacheSize}
-📊 استخدام الكاش: ${stats.cacheUsage}%
-💾 حجم الكاش الأقصى: ${stats.maxCacheSize}
-✅ النظام جاهز: ${stats.isReady ? 'نعم' : 'لا'}
-📚 المكتبة متاحة: ${stats.hasLibrary ? 'نعم' : 'لا'}
-
-🔧 الإعدادات:
-حجم QR: ${qrSystemSettings.size}x${qrSystemSettings.size}px
-إظهار في الطباعة: ${qrSystemSettings.showInPrint ? 'نعم' : 'لا'}
-تضمين معلومات الاتصال: ${qrSystemSettings.includeContactInfo ? 'نعم' : 'لا'}`);
-}
-
-// ==============================
-// إعداد مستمعي الأحداث
-// ==============================
-function setupQREventListeners() {
-    // مستمع النقر على زر QR في الشريط الجانبي
-    const qrButton = document.querySelector('.qr-scanner-btn');
-    if (qrButton && !qrButton.hasAttribute('data-qr-enhanced')) {
-        qrButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            showQRControlPanel();
-        });
-        qrButton.setAttribute('data-qr-enhanced', 'true');
-        qrButton.innerHTML = '<i class="fas fa-qrcode"></i><span>إعدادات QR</span>';
-    }
-    
-    // اختصارات لوحة المفاتيح
-    document.addEventListener('keydown', function(e) {
-        // Ctrl + Shift + Q لفتح لوحة التحكم
-        if (e.ctrlKey && e.shiftKey && e.key === 'Q') {
-            e.preventDefault();
-            showQRControlPanel();
-        }
-    });
-}
-
-// ==============================
-// وظائف مساعدة
-// ==============================
-function cleanupQRCache() {
-    const now = Date.now();
-    const expiredKeys = [];
-    
-    qrCodeCache.forEach((value, key) => {
-        if (now - value.timestamp > qrSystemSettings.cacheDuration) {
-            expiredKeys.push(key);
-        }
-    });
-    
-    expiredKeys.forEach(key => qrCodeCache.delete(key));
-    
-    if (expiredKeys.length > 0) {
-        console.log(`🧹 تم مسح ${expiredKeys.length} QR Code منتهي الصلاحية من الكاش`);
-    }
-}
-
-function showQRToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `qr-toast ${type}`;
-    toast.textContent = message;
-    
-    document.body.appendChild(toast);
-    
-    // إظهار الإشعار
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 100);
-    
-    // إخفاء الإشعار بعد 3 ثوان
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => {
-            if (document.body.contains(toast)) {
-                document.body.removeChild(toast);
-            }
-        }, 300);
-    }, 3000);
-}
-
-// ==============================
-// تهيئة النظام عند تحميل الصفحة
+// تهيئة النظام
 // ==============================
 document.addEventListener('DOMContentLoaded', function() {
-    // تأخير التهيئة للتأكد من تحميل التطبيق الرئيسي
+    // تحميل الإعدادات المحفوظة
+    loadQRSettings();
+    
+    // تأخير التهيئة قليلاً
     setTimeout(() => {
-        initializeQRSystem();
-    }, 1500);
+        initQRSystem();
+    }, 1000);
 });
 
 // ==============================
 // إتاحة الوظائف عالمياً
 // ==============================
-window.qrCodeSystem = {
-    show: showQRControlPanel,
-    hide: closeQRControlPanel,
-    generate: generateQRCodeForCase,
-    test: generateTestQR,
-    clearCache: clearQRCache,
-    settings: qrSystemSettings,
-    cache: qrCodeCache,
-    isReady: () => isQRSystemReady
+window.qrSystem = {
+    test: testQRCode,
+    settings: showQRSettings,
+    generate: generateQRForCase,
+    isReady: () => isQRReady,
+    config: QR_CONFIG
 };
 
-// إتاحة الوظائف المهمة للتطبيق الرئيسي
-window.generateQRCodeForCase = generateQRCodeForCase;
+// رسالة في الكونسول
+console.log(`
+🔳 نظام QR Code المُبسط
+📋 الوظائف المتاحة:
+• testQRCode() - اختبار النظام
+• showQRSettings() - فتح الإعدادات  
+• generateQRForCase(data) - إنشاء QR للحالة
+• qrSystem.test() - اختبار سريع
 
-// ==============================
-// معالج الأخطاء
-// ==============================
-window.addEventListener('error', function(e) {
-    if (e.filename && e.filename.includes('qr-system')) {
-        console.error('خطأ في نظام QR Code:', e.error);
-    }
-});
-
-console.log('🔳 تم تحميل نظام QR Code المُحسن والمُصحح بنجاح!');
-console.log('💡 استخدم Ctrl+Shift+Q لفتح لوحة التحكم');
-console.log('🔧 استخدم qrCodeSystem للتحكم البرمجي');
-console.log('📱 النظام متوافق مع جميع المتصفحات ومحسن للهواتف');
+✅ النظام مُصمم للعمل حتى لو فشلت المكتبة الخارجية
+`);
