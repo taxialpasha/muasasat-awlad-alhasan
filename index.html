@@ -348,7 +348,7 @@
         }
 
         /* ==============================
-           بطاقات الإحصائيات المُحسنة للهواتف
+           بطاقات الإحصائيات المُحسنة للهواتف (محدثة)
         ============================== */
         .stats-grid {
             display: grid;
@@ -526,6 +526,12 @@
 
         .form-control:invalid {
             border-color: #e74c3c;
+        }
+
+        /* تنسيق خاص للخيارات المضافة */
+        .form-control option {
+            padding: 8px;
+            font-size: 14px;
         }
 
         /* ==============================
@@ -1047,7 +1053,7 @@
             display: flex;
             flex-direction: column;
             width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 10px; /* تقليل المسافة هنا */
             max-height: calc(29cm - 180px);
             overflow: hidden;
             flex-shrink: 1;
@@ -1141,6 +1147,34 @@
             font-size: 16px;
         }
 
+        /* أقواس فارغة للكتابة اليدوية */
+        .empty-parentheses {
+            margin: 0 8px;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            min-width: 80px; /* مساحة أوسع للكتابة */
+            justify-content: center;
+            line-height: 1.2;
+            font-weight: 900;
+            color: #2c1a1a;
+            vertical-align: baseline;
+            height: auto;
+            padding: 0;
+        }
+
+        .empty-parentheses::before {
+            content: '(';
+            margin-left: 3px;
+            font-size: 16px;
+        }
+
+        .empty-parentheses::after {
+            content: ')';
+            margin-right: 3px;
+            font-size: 16px;
+        }
+
         .thick-divider {
             height: 2px;
             background-color: #000;
@@ -1150,7 +1184,7 @@
 
         .print-footer {
             margin-top: auto;
-            padding: 15px 0 10px 0;
+            padding: 8px 0 10px 0; /* تقليل المسافة العلوية */
             margin-left: 0;
             margin-right: 0;
             margin-bottom: 0;
@@ -1587,7 +1621,7 @@
             }
 
             .stats-grid {
-                grid-template-columns: repeat(4, 1fr);
+                grid-template-columns: repeat(3, 1fr); /* تحديث لإزالة البطاقة الرابعة */
                 gap: 20px;
             }
         }
@@ -1838,7 +1872,7 @@
                 </div>
 
                 <div class="content-body">
-                    <!-- بطاقات الإحصائيات -->
+                    <!-- بطاقات الإحصائيات (محدثة لإزالة إجمالي المبالغ) -->
                     <div class="stats-grid">
                         <div class="stat-card info">
                             <div class="stat-header">
@@ -1865,20 +1899,6 @@
                             <div class="stat-change positive">
                                 <i class="fas fa-arrow-up"></i>
                                 +8% من الشهر الماضي
-                            </div>
-                        </div>
-
-                        <div class="stat-card warning">
-                            <div class="stat-header">
-                                <div class="stat-title">إجمالي المبالغ</div>
-                                <div class="stat-icon warning">
-                                    <i class="fas fa-dollar-sign"></i>
-                                </div>
-                            </div>
-                            <div class="stat-value" id="total-amount">0</div>
-                            <div class="stat-change positive">
-                                <i class="fas fa-arrow-up"></i>
-                                +15% من الشهر الماضي
                             </div>
                         </div>
 
@@ -1978,7 +1998,14 @@
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">المنظم</label>
-                                        <input type="text" class="form-control" id="organizer" required>
+                                        <select class="form-control" id="organizer" required>
+                                            <option value="">اختر المنظم</option>
+                                            <option value="محمد حسن">محمد حسن</option>
+                                            <option value="محمد عرب">محمد عرب</option>
+                                            <option value="أبو كرار">أبو كرار</option>
+                                            <option value="other">إضافة منظم جديد...</option>
+                                        </select>
+                                        <input type="text" class="form-control" id="organizerCustom" placeholder="اسم المنظم الجديد" style="display: none; margin-top: 8px;">
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -2170,11 +2197,11 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label class="form-label">رقم الهاتف الأول</label>
-                                        <input type="tel" class="form-control" id="phoneFirst" value="00000000000">
+                                        <input type="tel" class="form-control" id="phoneFirst" value="00000000000" maxlength="11" onkeypress="return isNumberKey(event)" oninput="limitPhoneLength(this)">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">رقم الهاتف الثاني</label>
-                                        <input type="tel" class="form-control" id="phoneSecond" value="00000000000">
+                                        <input type="tel" class="form-control" id="phoneSecond" value="00000000000" maxlength="11" onkeypress="return isNumberKey(event)" oninput="limitPhoneLength(this)">
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -2200,7 +2227,18 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label class="form-label">المهنة</label>
-                                        <input type="text" class="form-control" id="spouseJob">
+                                        <select class="form-control" id="spouseJob">
+                                            <option value="">اختر المهنة</option>
+                                            <option value="ربة بيت">ربة بيت</option>
+                                            <option value="موظفة">موظفة</option>
+                                            <option value="معلمة">معلمة</option>
+                                            <option value="طبيبة">طبيبة</option>
+                                            <option value="ممرضة">ممرضة</option>
+                                            <option value="محاسبة">محاسبة</option>
+                                            <option value="عاطلة عن العمل">عاطلة عن العمل</option>
+                                            <option value="متقاعدة">متقاعدة</option>
+                                            <option value="أخرى">أخرى</option>
+                                        </select>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">الراتب</label>
@@ -2380,7 +2418,7 @@
                                         <th>اسم الحالة</th>
                                         <th>المبلغ</th>
                                         <th>التاريخ</th>
-                                        <th>الحالة</th>
+                                        <!-- إكمال الكود من حيث توقف -->
                                         <th>الإجراءات</th>
                                     </tr>
                                 </thead>
@@ -2850,7 +2888,7 @@
             orgName: 'مؤسسة أولاد الحسن (ع) الثقافية الخيرية',
             manager1: 'السيد أسامة السعبري',
             manager2: 'السيد فؤاد السعبري',
-            defaultOrganizer: 'أبو كرrar',
+            defaultOrganizer: 'أبو كرار',
             defaultFontSize: '16',
             autoFormNumber: 'yes',
             showQRCode: 'yes'
@@ -2861,11 +2899,15 @@
             CASES: 'charity_cases_data',
             SETTINGS: 'charity_settings',
             BACKUP: 'charity_backup',
-            VERSION: 'charity_version'
+            VERSION: 'charity_version',
+            FORM_COUNTER: 'charity_form_counter'
         };
 
         // رقم إصدار التطبيق
-        const APP_VERSION = '2.1.0';
+        const APP_VERSION = '2.2.0';
+
+        // متغير عداد المعاملات
+        let formNumberCounter = 1;
 
         // ==============================
         // تهيئة النظام عند تحميل الصفحة
@@ -2877,7 +2919,7 @@
             
             // رسالة ترحيب
             setTimeout(() => {
-                showToast('مرحباً بك في النظام المُحدث مع التخزين المحلي الكامل!', 'success', 'تم التحميل بنجاح');
+                showToast('مرحباً بك في النظام المُحدث مع نظام الترقيم الجديد!', 'success', 'تم التحميل بنجاح');
             }, 1000);
         });
 
@@ -2929,6 +2971,9 @@
             
             // تحديث لوحة التحكم
             updateDashboard();
+            
+            // إعداد معالج المنظم المخصص
+            setupOrganizerHandler();
         }
 
         // ==============================
@@ -2954,6 +2999,9 @@
                     version: APP_VERSION
                 };
                 localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settingsWithMetadata));
+                
+                // حفظ عداد المعاملات
+                localStorage.setItem(STORAGE_KEYS.FORM_COUNTER, formNumberCounter);
                 
                 // حفظ رقم الإصدار
                 localStorage.setItem(STORAGE_KEYS.VERSION, APP_VERSION);
@@ -2997,6 +3045,14 @@
                     console.log('⚙️ تم تحميل الإعدادات من التخزين المحلي');
                 }
                 
+                // تحميل عداد المعاملات
+                const savedCounter = localStorage.getItem(STORAGE_KEYS.FORM_COUNTER);
+                if (savedCounter) {
+                    formNumberCounter = parseInt(savedCounter) || 1;
+                } else {
+                    formNumberCounter = 1;
+                }
+                
                 // التحقق من الإصدار
                 const savedVersion = localStorage.getItem(STORAGE_KEYS.VERSION);
                 if (savedVersion !== APP_VERSION) {
@@ -3010,6 +3066,7 @@
                 // استخدام البيانات الافتراضية
                 casesData = [];
                 systemSettings = getDefaultSettings();
+                formNumberCounter = 1;
                 
                 showToast('تم استخدام البيانات الافتراضية', 'info');
             }
@@ -3076,6 +3133,67 @@
             } catch (error) {
                 console.error('❌ خطأ في مسح البيانات:', error);
                 return false;
+            }
+        }
+
+        // ==============================
+        // نظام ترقيم المعاملات الجديد
+        // ==============================
+        
+        // توليد رقم المعاملة بالنظام الجديد
+        function generateNewFormNumber(fullName) {
+            if (!fullName || fullName.trim() === '') {
+                return formNumberCounter.toString();
+            }
+            
+            // البحث عن حالات بنفس الاسم
+            const existingCases = casesData.filter(c => 
+                c.fullName && c.fullName.toLowerCase().trim() === fullName.toLowerCase().trim()
+            );
+            
+            if (existingCases.length === 0) {
+                // أول حالة لهذا الشخص
+                return formNumberCounter.toString();
+            } else {
+                // العثور على آخر رقم فرعي لهذا الشخص
+                const caseNumbers = existingCases
+                    .map(c => c.formNumber)
+                    .filter(num => num && num.includes('-'))
+                    .map(num => {
+                        const parts = num.split('-');
+                        if (parts.length === 2) {
+                            return {
+                                main: parseInt(parts[0]),
+                                sub: parseInt(parts[1])
+                            };
+                        }
+                        return null;
+                    })
+                    .filter(n => n !== null);
+                
+                if (caseNumbers.length === 0) {
+                    // لا توجد أرقام بالتنسيق الجديد، ابدأ من 1-1
+                    return `${formNumberCounter}-1`;
+                } else {
+                    // العثور على أعلى رقم فرعي
+                    const maxSubNumber = Math.max(...caseNumbers.map(n => n.sub));
+                    const mainNumber = caseNumbers[0].main; // يجب أن يكون نفس الرقم الأساسي
+                    return `${mainNumber}-${maxSubNumber + 1}`;
+                }
+            }
+        }
+
+        // تحديث رقم المعاملة عند تغيير الاسم
+        function updateFormNumberOnNameChange() {
+            const fullNameInput = document.getElementById('fullName');
+            const formNumberInput = document.getElementById('formNumber');
+            
+            if (fullNameInput && formNumberInput && systemSettings.autoFormNumber === 'yes') {
+                const fullName = fullNameInput.value.trim();
+                if (fullName) {
+                    const newFormNumber = generateNewFormNumber(fullName);
+                    formNumberInput.value = newFormNumber;
+                }
             }
         }
 
@@ -3159,6 +3277,12 @@
                 form.addEventListener('change', debounce(markFormDirty, 1000));
             }
 
+            // مراقبة تغيير الاسم لتحديث رقم المعاملة
+            const fullNameInput = document.getElementById('fullName');
+            if (fullNameInput) {
+                fullNameInput.addEventListener('blur', updateFormNumberOnNameChange);
+            }
+
             // إعداد أحداث لوحة المفاتيح
             setupKeyboardShortcuts();
             
@@ -3172,11 +3296,155 @@
             setupStorageMonitoring();
         }
 
-        // إعداد اختصارات لوحة المفاتيح
+        // ==============================
+        // إعداد معالج المنظم المخصص
+        // ==============================
+        function setupOrganizerHandler() {
+            const organizerSelect = document.getElementById('organizer');
+            const organizerCustom = document.getElementById('organizerCustom');
+            
+            if (organizerSelect && organizerCustom) {
+                organizerSelect.addEventListener('change', function() {
+                    if (this.value === 'other') {
+                        organizerCustom.style.display = 'block';
+                        organizerCustom.focus();
+                    } else {
+                        organizerCustom.style.display = 'none';
+                        organizerCustom.value = '';
+                    }
+                });
+            }
+        }
+
+        // ==============================
+        // وظائف الهاتف المُحسنة
+        // ==============================
+        
+        // التحقق من كون الإدخال أرقام فقط
+        function isNumberKey(evt) {
+            const charCode = (evt.which) ? evt.which : evt.keyCode;
+            if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        }
+
+        // تحديد طول رقم الهاتف إلى 11 رقم
+        function limitPhoneLength(input) {
+            if (input.value.length > 11) {
+                input.value = input.value.slice(0, 11);
+            }
+        }
+
+        // ==============================
+        // تحديث الحقول الديناميكية للعائلة (مُصحح)
+        // ==============================
+        function updateFamilyFields() {
+            const maleChildren = parseInt(document.getElementById('maleChildren').value) || 0;
+            const femaleChildren = parseInt(document.getElementById('femaleChildren').value) || 0;
+            const married = parseInt(document.getElementById('married').value) || 0;
+            
+            const totalMembers = maleChildren + femaleChildren + married;
+            
+            const dynamicFieldsContainer = document.getElementById('familyDynamicFields');
+            const fieldsContainer = document.getElementById('dynamicFieldsContainer');
+            
+            // مسح الحقول الموجودة
+            fieldsContainer.innerHTML = '';
+            
+            if (totalMembers > 0) {
+                dynamicFieldsContainer.style.display = 'block';
+                
+                // إنشاء حقول البنين
+                if (maleChildren > 0) {
+                    createMemberFields('بنين', maleChildren, 'male');
+                }
+                
+                // إنشاء حقول البنات
+                if (femaleChildren > 0) {
+                    createMemberFields('بنات', femaleChildren, 'female');
+                }
+                
+                // إنشاء حقول المتزوجين
+                if (married > 0) {
+                    createMemberFields('متزوجين', married, 'married');
+                }
+            } else {
+                dynamicFieldsContainer.style.display = 'none';
+            }
+        }
+        
+        // إنشاء حقول لمجموعة من أفراد العائلة (مُحسن مع خيارات الوظائف)
+        function createMemberFields(groupTitle, count, groupType) {
+            const fieldsContainer = document.getElementById('dynamicFieldsContainer');
+            
+            const memberGroup = document.createElement('div');
+            memberGroup.style.marginBottom = '15px';
+            memberGroup.style.padding = '15px';
+            memberGroup.style.backgroundColor = 'white';
+            memberGroup.style.borderRadius = '8px';
+            memberGroup.style.border = '1px solid #e3e6f0';
+            memberGroup.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)';
+            
+            const groupTitleDiv = document.createElement('h5');
+            groupTitleDiv.textContent = groupTitle;
+            groupTitleDiv.style.color = '#3498db';
+            groupTitleDiv.style.marginBottom = '15px';
+            groupTitleDiv.style.fontSize = '14px';
+            groupTitleDiv.style.fontWeight = '600';
+            memberGroup.appendChild(groupTitleDiv);
+            
+            for (let i = 1; i <= count; i++) {
+                const memberRow = document.createElement('div');
+                memberRow.style.display = 'grid';
+                memberRow.style.gridTemplateColumns = '1fr 1fr';
+                memberRow.style.gap = '12px';
+                memberRow.style.marginBottom = '12px';
+                
+                // حقل العمر
+                const ageGroup = document.createElement('div');
+                ageGroup.innerHTML = `
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #2c3e50;">عمر ${groupTitle} ${i}</label>
+                    <input type="number" id="${groupType}Age${i}" class="form-control" placeholder="العمر" min="0" max="120" style="padding: 10px 12px; font-size: 13px;">
+                `;
+                
+                // حقل المهنة مع خيارات
+                const jobGroup = document.createElement('div');
+                jobGroup.innerHTML = `
+                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #2c3e50;">مهنة ${groupTitle} ${i}</label>
+                    <select id="${groupType}Job${i}" class="form-control" style="padding: 10px 12px; font-size: 13px;">
+                        <option value="">اختر المهنة</option>
+                        <option value="كاسب">كاسب</option>
+                        <option value="عسكري">عسكري</option>
+                        <option value="موظف">موظف</option>
+                        <option value="خدمة">خدمة</option>
+                        <option value="طالب">طالب</option>
+                        <option value="معلم">معلم</option>
+                        <option value="طبيب">طبيب</option>
+                        <option value="مهندس">مهندس</option>
+                        <option value="محاسب">محاسب</option>
+                        <option value="عاطل عن العمل">عاطل عن العمل</option>
+                        <option value="متقاعد">متقاعد</option>
+                        <option value="ربة بيت">ربة بيت</option>
+                        <option value="أخرى">أخرى</option>
+                    </select>
+                `;
+                
+                memberRow.appendChild(ageGroup);
+                memberRow.appendChild(jobGroup);
+                memberGroup.appendChild(memberRow);
+            }
+            
+            fieldsContainer.appendChild(memberGroup);
+        }
+
+        // ==============================
+        // إعداد أحداث لوحة المفاتيح
+        // ==============================
         function setupKeyboardShortcuts() {
             document.addEventListener('keydown', function(e) {
                 // منع الاختصارات إذا كان المستخدم يكتب في حقل إدخال
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
                     return;
                 }
                 
@@ -3512,8 +3780,10 @@
             console.log('🗑️ تم حذف المسودة');
         }
 
+        // يتبع في الجزء القادم...
+
         // ==============================
-        // حفظ النموذج المُحسن مع التخزين المحلي الفوري
+        // حفظ النموذج المُحسن مع نظام الترقيم الجديد
         // ==============================
         function saveForm() {
             try {
@@ -3550,10 +3820,27 @@
                     }
                 } else {
                     // وضع الإنشاء الجديد
+                    
+                    // تحديد رقم المعاملة بالنظام الجديد
+                    const finalFormNumber = generateNewFormNumber(formData.fullName);
+                    formData.formNumber = finalFormNumber;
+                    
+                    // تحديث العداد إذا كان هذا رقم أساسي جديد
+                    if (!finalFormNumber.includes('-')) {
+                        formNumberCounter = Math.max(formNumberCounter, parseInt(finalFormNumber)) + 1;
+                    }
+                    
                     formData.id = generateUniqueId();
                     formData.createdAt = new Date().toISOString();
                     formData.updatedAt = new Date().toISOString();
                     formData.status = 'active';
+                    
+                    // الحصول على المنظم النهائي
+                    const organizerSelect = document.getElementById('organizer');
+                    const organizerCustom = document.getElementById('organizerCustom');
+                    if (organizerSelect.value === 'other' && organizerCustom.value.trim()) {
+                        formData.organizer = organizerCustom.value.trim();
+                    }
                     
                     // إضافة إلى قاعدة البيانات
                     casesData.push(formData);
@@ -3564,7 +3851,7 @@
                         updateStatistics();
                         updateDashboard();
                         
-                        showToast('تم حفظ الحالة في التخزين المحلي بنجاح!', 'success', 'نجح الحفظ');
+                        showToast(`تم حفظ الحالة برقم ${finalFormNumber} بنجاح!`, 'success', 'نجح الحفظ');
                         
                         // إعادة تعيين النموذج
                         setTimeout(() => {
@@ -3638,8 +3925,8 @@
             const phoneFields = ['phoneFirst', 'phoneSecond'];
             for (let field of phoneFields) {
                 if (data[field] && data[field] !== '' && data[field] !== '00000000000') {
-                    if (!/^[0-9+\-\s()]+$/.test(data[field])) {
-                        showValidationError(field, 'يرجى إدخال رقم هاتف صحيح');
+                    if (!/^[0-9]+$/.test(data[field]) || data[field].length !== 11) {
+                        showValidationError(field, 'يرجى إدخال رقم هاتف صحيح (11 رقم)');
                         return false;
                     }
                 }
@@ -3767,7 +4054,7 @@
         }
 
         // ==============================
-        // تحديث الإحصائيات المُحسن مع التحليلات المتقدمة
+        // تحديث الإحصائيات المُحسن (بدون إجمالي المبالغ)
         // ==============================
         function updateStatistics() {
             try {
@@ -3775,22 +4062,15 @@
                 const completedCases = casesData.filter(c => c.status === 'completed').length;
                 const activeCases = casesData.filter(c => c.status === 'active').length;
                 
-                // حساب المبلغ الإجمالي
-                const totalAmount = casesData.reduce((sum, c) => {
-                    const amount = parseFloat(c.estimatedAssistance) || 0;
-                    return sum + amount;
-                }, 0);
-                
                 // حساب حالات كل نوع
                 const sayedCases = casesData.filter(c => c.caseCode === 'سيد').length;
                 const expensesCases = casesData.filter(c => c.caseCode === 'مصاريف').length;
                 const generalCases = casesData.filter(c => c.caseCode === 'عام').length;
                 
-                // تحديث العناصر في الواجهة
+                // تحديث العناصر في الواجهة (بدون إجمالي المبالغ)
                 updateElement('total-cases', totalCases);
                 updateElement('completed-cases', completedCases);
                 updateElement('active-cases', activeCases);
-                updateElement('total-amount', formatCurrency(totalAmount));
                 
                 // تحديث أرقام الشارات
                 updateElement('sayed-count', sayedCases);
@@ -3875,9 +4155,9 @@
             }
         }
 
-        // ==============================
-        // تحديث لوحة التحكم
-        // ==============================
+
+
+
         function updateDashboard() {
             updateRecentCasesTable();
             updateStatistics();
@@ -4154,6 +4434,22 @@
                 }
             });
             
+            // معالجة المنظم المخصص
+            const organizerSelect = document.getElementById('organizer');
+            const organizerCustom = document.getElementById('organizerCustom');
+            const organizerValue = data.organizer;
+            
+            if (organizerValue) {
+                const predefinedOptions = ['محمد حسن', 'محمد عرب', 'أبو كرار'];
+                if (predefinedOptions.includes(organizerValue)) {
+                    organizerSelect.value = organizerValue;
+                } else {
+                    organizerSelect.value = 'other';
+                    organizerCustom.style.display = 'block';
+                    organizerCustom.value = organizerValue;
+                }
+            }
+            
             // تعبئة بيانات العائلة إذا كانت متوفرة
             if (data.familyMembers) {
                 updateFamilyFields();
@@ -4401,11 +4697,25 @@
 
         // تحديث المنظم من الإعدادات
         function updateOrganizerFromSettings() {
-            const organizerInput = document.getElementById('organizer');
+            const organizerSelect = document.getElementById('organizer');
             const currentUserElement = document.getElementById('current-user');
             
-            if (organizerInput && systemSettings.defaultOrganizer) {
-                organizerInput.value = systemSettings.defaultOrganizer;
+            if (organizerSelect && systemSettings.defaultOrganizer) {
+                // التحقق من وجود القيمة في الخيارات
+                const options = organizerSelect.options;
+                let found = false;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === systemSettings.defaultOrganizer) {
+                        organizerSelect.value = systemSettings.defaultOrganizer;
+                        found = true;
+                        break;
+                    }
+                }
+                
+                // إذا لم يتم العثور على القيمة، استخدم الخيار الافتراضي
+                if (!found) {
+                    organizerSelect.value = 'أبو كرار';
+                }
             }
             
             if (currentUserElement && systemSettings.defaultOrganizer) {
@@ -4427,18 +4737,9 @@
         function generateFormNumber() {
             if (systemSettings.autoFormNumber === 'no') return;
             
-            const today = new Date();
-            const year = today.getFullYear().toString().slice(-2);
-            const month = (today.getMonth() + 1).toString().padStart(2, '0');
-            const day = today.getDate().toString().padStart(2, '0');
-            const hour = today.getHours().toString().padStart(2, '0');
-            const minute = today.getMinutes().toString().padStart(2, '0');
-            const second = today.getSeconds().toString().padStart(2, '0');
-            
-            const formNumber = `${year}${month}${day}-${hour}${minute}${second}`;
             const formNumberInput = document.getElementById('formNumber');
             if (formNumberInput) {
-                formNumberInput.value = formNumber;
+                formNumberInput.value = formNumberCounter.toString();
             }
         }
 
@@ -4461,88 +4762,6 @@
                     rentAmountInput.value = '';
                 }
             }
-        }
-        
-        // تحديث الحقول الديناميكية للعائلة
-        function updateFamilyFields() {
-            const maleChildren = parseInt(document.getElementById('maleChildren').value) || 0;
-            const femaleChildren = parseInt(document.getElementById('femaleChildren').value) || 0;
-            const married = parseInt(document.getElementById('married').value) || 0;
-            
-            const totalMembers = maleChildren + femaleChildren + married;
-            
-            const dynamicFieldsContainer = document.getElementById('familyDynamicFields');
-            const fieldsContainer = document.getElementById('dynamicFieldsContainer');
-            
-            // مسح الحقول الموجودة
-            fieldsContainer.innerHTML = '';
-            
-            if (totalMembers > 0) {
-                dynamicFieldsContainer.style.display = 'block';
-                
-
-                
-                // إنشاء حقول البنات
-                if (femaleChildren > 0) {
-                    createMemberFields('بنات', femaleChildren, 'female');
-                }
-                
-                // إنشاء حقول المتزوجين
-                if (married > 0) {
-                    createMemberFields('متزوجين', married, 'married');
-                }
-            } else {
-                dynamicFieldsContainer.style.display = 'none';
-            }
-        }
-        
-        // إنشاء حقول لمجموعة من أفراد العائلة
-        function createMemberFields(groupTitle, count, groupType) {
-            const fieldsContainer = document.getElementById('dynamicFieldsContainer');
-            
-            const memberGroup = document.createElement('div');
-            memberGroup.style.marginBottom = '15px';
-            memberGroup.style.padding = '15px';
-            memberGroup.style.backgroundColor = 'white';
-            memberGroup.style.borderRadius = '8px';
-            memberGroup.style.border = '1px solid #e3e6f0';
-            memberGroup.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)';
-            
-            const groupTitleDiv = document.createElement('h5');
-            groupTitleDiv.textContent = groupTitle;
-            groupTitleDiv.style.color = '#3498db';
-            groupTitleDiv.style.marginBottom = '15px';
-            groupTitleDiv.style.fontSize = '14px';
-            groupTitleDiv.style.fontWeight = '600';
-            memberGroup.appendChild(groupTitleDiv);
-            
-            for (let i = 1; i <= count; i++) {
-                const memberRow = document.createElement('div');
-                memberRow.style.display = 'grid';
-                memberRow.style.gridTemplateColumns = '1fr 1fr';
-                memberRow.style.gap = '12px';
-                memberRow.style.marginBottom = '12px';
-                
-                // حقل العمر
-                const ageGroup = document.createElement('div');
-                ageGroup.innerHTML = `
-                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #2c3e50;">عمر ${groupTitle} ${i}</label>
-                    <input type="number" id="${groupType}Age${i}" class="form-control" placeholder="العمر" min="0" max="120" style="padding: 10px 12px; font-size: 13px;">
-                `;
-                
-                // حقل المهنة
-                const jobGroup = document.createElement('div');
-                jobGroup.innerHTML = `
-                    <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: #2c3e50;">مهنة ${groupTitle} ${i}</label>
-                    <input type="text" id="${groupType}Job${i}" class="form-control" placeholder="المهنة" style="padding: 10px 12px; font-size: 13px;">
-                `;
-                
-                memberRow.appendChild(ageGroup);
-                memberRow.appendChild(jobGroup);
-                memberGroup.appendChild(memberRow);
-            }
-            
-            fieldsContainer.appendChild(memberGroup);
         }
         
         // حساب باقي الدخل
@@ -4622,6 +4841,13 @@
                     familyDynamicFields.style.display = 'none';
                 }
                 
+                // إخفاء المنظم المخصص
+                const organizerCustom = document.getElementById('organizerCustom');
+                if (organizerCustom) {
+                    organizerCustom.style.display = 'none';
+                    organizerCustom.value = '';
+                }
+                
                 // إعادة تعيين عنوان القسم
                 const sectionTitle = document.querySelector('#create-case-section .content-header h2');
                 if (sectionTitle) {
@@ -4681,7 +4907,8 @@
                 hasOtherSupport: "نعم",
                 supporterName: "أخ الزوج",
                 supporterRelation: "أخ",
-                estimatedAssistance: "500000"
+                estimatedAssistance: "500000",
+                organizer: "محمد حسن"
             };
             
             for (const key in fake) {
@@ -4724,7 +4951,7 @@
         }
 
         // ==============================
-        // نظام الطباعة المُحسن مع QR Code
+        // نظام الطباعة المُحسن مع الأقواس الفارغة
         // ==============================
         
         // إظهار معاينة الطباعة المُحسنة مع إصلاح QR Code
@@ -4818,12 +5045,17 @@
             const headerTable = document.createElement('table');
             headerTable.className = 'header-table';
 
-            // بيانات الحالة
+            // بيانات الحالة مع المنظم النهائي
+            let finalOrganizer = data.organizer;
+            if (data.organizer === 'other' && data.organizerCustom) {
+                finalOrganizer = data.organizerCustom;
+            }
+
             const headerRows = [
                 { label: 'رمز الحالة:', value: data.caseCode || 'مصاريف' },
                 { label: 'نوع الحالة:', value: data.caseType || 'مهرجان استشهاد امير المؤمنين' },
                 { label: 'التاريخ:', value: formattedDate },
-                { label: 'المنظم:', value: data.organizer || systemSettings.defaultOrganizer || 'أبو كरار' }
+                { label: 'المنظم:', value: finalOrganizer || systemSettings.defaultOrganizer || 'أبو كرار' }
             ];
 
             headerRows.forEach(row => {
@@ -4853,18 +5085,26 @@
 
             container.appendChild(content);
 
-            // تذييل الصفحة
+            // تذييل الصفحة مع الأقواس المحسنة
             const footer = document.createElement('div');
             footer.className = 'print-footer';
 
             const today = new Date();
             const footerDate = `${today.getDate()} / ${today.getMonth() + 1} / ${today.getFullYear()}`;
 
+            // معالجة مبلغ المساعدة مع الأقواس الفارغة
+            let assistanceAmountDisplay;
+            if (data.estimatedAssistance && data.estimatedAssistance.trim() !== '') {
+                assistanceAmountDisplay = `<span class="parentheses-value">${data.estimatedAssistance}</span>`;
+            } else {
+                assistanceAmountDisplay = `<span class="empty-parentheses"></span>`;
+            }
+
             footer.innerHTML = `
                 <div class="footer-content">
                     <div class="footer-right">
                         <div class="payment-info">
-                            تم صرف مبلغ <span class="parentheses-value">${data.estimatedAssistance || ''}</span> بتاريخ ${footerDate}
+                            تم صرف مبلغ ${assistanceAmountDisplay} بتاريخ ${footerDate}
                         </div>
                     </div>
                     <div class="footer-left">
@@ -5018,10 +5258,13 @@
 
                 ${generateAdditionalRowsHTML(data)}
 
-                <!-- مبلغ المساعدة -->
+                <!-- مبلغ المساعدة مع الأقواس المحسنة -->
                 <div class="assistance-amount">
                     <span class="label">يصرف مبلغ المساعدة المقدر:</span>
-                    <span class="parentheses-value">${data.estimatedAssistance || ''}</span>
+                    ${data.estimatedAssistance && data.estimatedAssistance.trim() !== '' ? 
+                        `<span class="parentheses-value">${data.estimatedAssistance}</span>` : 
+                        `<span class="empty-parentheses"></span>`
+                    }
                 </div>
             `;
         }
@@ -5353,8 +5596,10 @@ ${data.estimatedAssistance || 'غير محدد'} دينار
         }
 
         // ==============================
-        // تهيئة الرسوم البيانية المُحسنة
+        // باقي الوظائف المساعدة
         // ==============================
+
+        // تهيئة الرسوم البيانية المُحسنة
         function initializeCharts() {
             // رسم بياني للإحصائيات العامة
             const ctx1 = document.getElementById('statisticsChart');
@@ -5624,7 +5869,6 @@ ${systemSettings.orgName}
 📊 إحصائيات عامة:
 • إجمالي الحالات: ${casesData.length}
 • الحالات النشطة: ${casesData.filter(c => c.status === 'active').length}
-• إجمالي المبالغ: ${formatCurrency(casesData.reduce((sum, c) => sum + (parseFloat(c.estimatedAssistance) || 0), 0))}
 
 📈 توزيع الحالات:
 • حالات السيد: ${casesData.filter(c => c.caseCode === 'سيد').length}
@@ -5662,7 +5906,8 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                 settings: systemSettings,
                 exportDate: new Date().toISOString(),
                 version: APP_VERSION,
-                organization: systemSettings.orgName
+                organization: systemSettings.orgName,
+                formCounter: formNumberCounter
             };
             
             const dataStr = JSON.stringify(exportData, null, 2);
@@ -5702,6 +5947,11 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                         if (importedData.settings) {
                             systemSettings = { ...systemSettings, ...importedData.settings };
                             loadSettingsToForm();
+                        }
+                        
+                        // استيراد عداد المعاملات
+                        if (importedData.formCounter) {
+                            formNumberCounter = Math.max(formNumberCounter, importedData.formCounter);
                         }
                         
                         // حفظ في التخزين المحلي
@@ -5747,6 +5997,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             const backupData = {
                 cases: casesData,
                 settings: systemSettings,
+                formCounter: formNumberCounter,
                 timestamp: new Date().toISOString(),
                 version: APP_VERSION,
                 type: 'full_backup',
@@ -5770,6 +6021,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             const backupData = {
                 cases: recentCases,
                 settings: systemSettings,
+                formCounter: formNumberCounter,
                 timestamp: new Date().toISOString(),
                 version: APP_VERSION,
                 type: 'partial_backup',
@@ -5811,6 +6063,10 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                         if (backupData.settings) {
                             systemSettings = { ...systemSettings, ...backupData.settings };
                             loadSettingsToForm();
+                        }
+                        
+                        if (backupData.formCounter) {
+                            formNumberCounter = backupData.formCounter;
                         }
                         
                         // حفظ في التخزين المحلي
@@ -6157,6 +6413,7 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
                 settings: systemSettings,
                 charts: Object.keys(chartInstances),
                 version: APP_VERSION,
+                formCounter: formNumberCounter,
                 storageUsed: JSON.stringify(casesData).length + JSON.stringify(systemSettings).length,
                 lastSaveTime: new Date(lastSaveTime).toLocaleString('ar-EG'),
                 currentSection: currentSection,
@@ -6173,12 +6430,13 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
         window.charityDebug = debugInfo;
         window.charitySystem = {
             version: APP_VERSION,
-            exportData: () => JSON.stringify({ cases: casesData, settings: systemSettings }, null, 2),
+            exportData: () => JSON.stringify({ cases: casesData, settings: systemSettings, formCounter: formNumberCounter }, null, 2),
             importData: (jsonData) => {
                 try {
                     const data = JSON.parse(jsonData);
                     if (data.cases) casesData = data.cases;
                     if (data.settings) systemSettings = { ...systemSettings, ...data.settings };
+                    if (data.formCounter) formNumberCounter = data.formCounter;
                     saveToLocalStorage();
                     updateStatistics();
                     updateDashboard();
@@ -6190,10 +6448,19 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             clearAll: () => {
                 if (confirm('هل أنت متأكد من حذف جميع البيانات؟')) {
                     casesData = [];
+                    formNumberCounter = 1;
                     clearLocalStorage();
                     updateStatistics();
                     updateDashboard();
                     return 'تم حذف جميع البيانات';
+                }
+                return 'تم الإلغاء';
+            },
+            resetFormCounter: () => {
+                if (confirm('هل أنت متأكد من إعادة تعيين عداد المعاملات؟')) {
+                    formNumberCounter = 1;
+                    saveToLocalStorage();
+                    return 'تم إعادة تعيين عداد المعاملات';
                 }
                 return 'تم الإلغاء';
             }
@@ -6206,19 +6473,25 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
 💾 التخزين المحلي: مُفعل ويعمل بكفاءة عالية
 🔧 جميع الميزات مُفعلة ومُحسنة
 📱 متوافق مع جميع أحجام الشاشات
+🆔 نظام الترقيم الجديد: مُفعل
 ⚙️ استخدم charityDebug() للحصول على معلومات التشخيص
 🛠️ استخدم charitySystem للأدوات المتقدمة
+
+✨ الميزات الجديدة:
+• نظام ترقيم المعاملات المحسن (1, 1-2, 1-3, إلخ)
+• خيارات المنظم مع إمكانية الإضافة
+• تحديد أرقام الهواتف إلى 11 رقم
+• خيارات الوظائف للعائلة
+• أقواس فارغة في مبلغ المساعدة للكتابة اليدوية
+• إزالة بطاقة إجمالي المبالغ من لوحة التحكم
         `);
 
         // تشغيل النظام عند تحميل الصفحة
         window.addEventListener('load', function() {
             handleResize();
-            console.log('✅ تم تحميل نظام إدارة الحالات الخيرية بنجاح مع التخزين المحلي الكامل');
+            console.log('✅ تم تحميل نظام إدارة الحالات الخيرية بنجاح مع جميع التحديثات المطلوبة');
         });
-        
-        
-
-    </script> 
+ </script> 
 <script src="attachments-manager.js"></script>
 
     <script src="voice-input.js"></script>
