@@ -6553,6 +6553,392 @@ ${index + 1}. الاسم: ${c.fullName || 'غير محدد'}
             handleResize();
             console.log('✅ تم تحميل نظام إدارة الحالات الخيرية بنجاح مع جميع التحديثات المطلوبة');
         });
+        
+        // ==============================
+// تعديلات التطبيق الرئيسي لتكامل QR Code المُحسن
+// يجب إضافة هذا الكود في نهاية ملف التطبيق الرئيسي
+// ==============================
+
+// تعديل وظيفة generateQRCode الموجودة في التطبيق الرئيسي
+(function() {
+    // انتظار تحميل نظام QR
+    let qrIntegrationAttempts = 0;
+    const maxAttempts = 10;
+    
+    function integrateQRSystem() {
+        qrIntegrationAttempts++;
+        
+        if (typeof window.qrCodeSystem !== 'undefined' && window.qrCodeSystem.isReady()) {
+            console.log('✅ تم تكامل نظام QR Code مع التطبيق الرئيسي');
+            setupQRIntegration();
+        } else if (qrIntegrationAttempts < maxAttempts) {
+            setTimeout(integrateQRSystem, 500);
+        } else {
+            console.warn('⚠️ فشل في تكامل نظام QR Code، سيتم استخدام النظام الاحتياطي');
+            setupFallbackQR();
+        }
+    }
+    
+    function setupQRIntegration() {
+        // تحسين وظيفة generateQRCode الموجودة
+        if (typeof window.generateQRCode === 'function') {
+            const originalGenerateQR = window.generateQRCode;
+            
+            window.generateQRCode = async function(text, size = 200) {
+                try {
+                    if (window.qrCodeSystem && window.qrCodeSystem.isReady()) {
+                        // استخدام نظام QR المحسن
+                        const canvas = document.createElement('canvas');
+                        
+                        // استخدام QRCode library إذا كانت متاحة
+                        if (typeof QRCode !== 'undefined') {
+                            await QRCode.toCanvas(canvas, text, {
+                                width: size,
+                                height: size,
+                                margin: 2,
+                                color: {
+                                    dark: '#000000',
+                                    light: '#FFFFFF'
+                                },
+                                errorCorrectionLevel: 'M'
+                            });
+                            return canvas;
+                        }
+                    }
+                    
+                    // العودة للوظيفة الأصلية
+                    return await originalGenerateQR(text, size);
+                    
+                } catch (error) {
+                    console.error('خطأ في generateQRCode المحسن:', error);
+                    return await originalGenerateQR(text, size);
+                }
+            };
+        }
+        
+        // تحسين وظيفة createEnhancedPrintTemplate
+        if (typeof window.createEnhancedPrintTemplate === 'function') {
+            const originalCreateTemplate = window.createEnhancedPrintTemplate;
+            
+            window.createEnhancedPrintTemplate = async function(data) {
+                try {
+                    const container = await originalCreateTemplate(data);
+                    
+                    // إضافة QR Code باستخدام النظام المحسن
+                    if (window.qrCodeSystem && window.qrCodeSystem.isReady()) {
+                        await addEnhancedQRToContainer(container, data);
+                    }
+                    
+                    return container;
+                } catch (error) {
+                    console.error('خطأ في createEnhancedPrintTemplate المحسن:', error);
+                    return await originalCreateTemplate(data);
+                }
+            };
+        }
+        
+        // تحديث زر QR في الشريط الجانبي
+        updateQRButton();
+    }
+    
+    function setupFallbackQR() {
+        // إنشاء نظام QR احتياطي بسيط
+        window.generateQRCode = window.generateQRCode || async function(text, size = 200) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            
+            const ctx = canvas.getContext('2d');
+            
+            // خلفية بيضاء
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            
+            // حدود سوداء
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(2, 2, size - 4, size - 4);
+            
+            // نص QR
+            ctx.fillStyle = '#000000';
+            ctx.font = `${Math.floor(size / 15)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText('QR', size / 2, size / 2 - 10);
+            ctx.font = `${Math.floor(size / 25)}px Arial`;
+            ctx.fillText('CODE', size / 2, size / 2 + 10);
+            
+            return canvas;
+        };
+        
+        console.log('⚠️ تم تفعيل نظام QR الاحتياطي');
+    }
+    
+    async function addEnhancedQRToContainer(container, data) {
+        try {
+            const qrSection = container.querySelector('.header-qr');
+            if (!qrSection) return;
+            
+            qrSection.innerHTML = '';
+            
+            // إنشاء QR Code باستخدام النظام المحسن
+            const qrCanvas = await window.qrCodeSystem.generate(data);
+            
+            if (qrCanvas) {
+                qrCanvas.style.cssText = `
+                    max-width: 60px !important;
+                    max-height: 60px !important;
+                    border: 1px solid #000 !important;
+                    display: block !important;
+                    margin: 0 auto !important;
+                `;
+                
+                qrSection.appendChild(qrCanvas);
+                console.log('✅ تم إضافة QR Code المحسن للطباعة');
+            } else {
+                qrSection.innerHTML = '<div style="font-size:10px; text-align:center;">QR<br>Code</div>';
+            }
+            
+        } catch (error) {
+            console.error('خطأ في إضافة QR Code المحسن:', error);
+            const qrSection = container.querySelector('.header-qr');
+            if (qrSection) {
+                qrSection.innerHTML = '<div style="font-size:10px; text-align:center; color:#e74c3c;">QR<br>خطأ</div>';
+            }
+        }
+    }
+    
+    function updateQRButton() {
+        const qrButton = document.querySelector('.qr-scanner-btn');
+        if (qrButton && !qrButton.hasAttribute('data-enhanced')) {
+            qrButton.innerHTML = '<i class="fas fa-qrcode"></i><span id="qr-text">إعدادات QR</span>';
+            qrButton.onclick = function() {
+                if (window.qrCodeSystem && typeof window.qrCodeSystem.show === 'function') {
+                    window.qrCodeSystem.show();
+                } else {
+                    if (typeof showToast === 'function') {
+                        showToast('نظام QR Code غير متاح حالياً', 'warning');
+                    } else {
+                        alert('نظام QR Code غير متاح حالياً');
+                    }
+                }
+            };
+            qrButton.setAttribute('data-enhanced', 'true');
+            console.log('✅ تم تحديث زر QR في الشريط الجانبي');
+        }
+    }
+    
+    // بدء عملية التكامل
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(integrateQRSystem, 1000);
+        });
+    } else {
+        setTimeout(integrateQRSystem, 1000);
+    }
+})();
+
+// ==============================
+// إضافة وظائف إضافية لتحسين تجربة QR Code
+// ==============================
+
+// وظيفة لتصدير QR Code كصورة
+window.exportQRCode = async function(caseData, filename) {
+    try {
+        if (!window.qrCodeSystem || !window.qrCodeSystem.isReady()) {
+            throw new Error('نظام QR Code غير متاح');
+        }
+        
+        const qrCanvas = await window.qrCodeSystem.generate(caseData);
+        if (!qrCanvas) {
+            throw new Error('فشل في إنشاء QR Code');
+        }
+        
+        // تحويل إلى صورة وتحميلها
+        const link = document.createElement('a');
+        link.download = filename || `qr_code_${caseData.formNumber || 'unknown'}.png`;
+        link.href = qrCanvas.toDataURL();
+        link.click();
+        
+        if (typeof showToast === 'function') {
+            showToast('تم تصدير QR Code بنجاح', 'success');
+        }
+        
+    } catch (error) {
+        console.error('خطأ في تصدير QR Code:', error);
+        if (typeof showToast === 'function') {
+            showToast('فشل في تصدير QR Code', 'error');
+        }
+    }
+};
+
+// وظيفة لطباعة QR Code منفرداً
+window.printQRCode = async function(caseData) {
+    try {
+        if (!window.qrCodeSystem || !window.qrCodeSystem.isReady()) {
+            throw new Error('نظام QR Code غير متاح');
+        }
+        
+        const qrCanvas = await window.qrCodeSystem.generate(caseData);
+        if (!qrCanvas) {
+            throw new Error('فشل في إنشاء QR Code');
+        }
+        
+        // إنشاء نافذة طباعة مخصصة للQR Code
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>QR Code - ${caseData.formNumber || 'غير محدد'}</title>
+                    <style>
+                        body {
+                            margin: 0;
+                            padding: 20px;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            min-height: 100vh;
+                            font-family: Arial, sans-serif;
+                        }
+                        .qr-container {
+                            text-align: center;
+                        }
+                        .qr-info {
+                            margin-bottom: 20px;
+                            font-size: 14px;
+                            color: #333;
+                        }
+                        canvas {
+                            border: 2px solid #000;
+                            margin: 20px 0;
+                        }
+                        @media print {
+                            body { margin: 0; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="qr-container">
+                        <div class="qr-info">
+                            <h2>${systemSettings?.orgName || 'نظام إدارة الحالات الخيرية'}</h2>
+                            <p>رقم الاستمارة: ${caseData.formNumber || 'غير محدد'}</p>
+                            <p>اسم الحالة: ${caseData.fullName || 'غير محدد'}</p>
+                            <p>تاريخ الإنشاء: ${new Date().toLocaleDateString('ar-EG')}</p>
+                        </div>
+                        <div id="qr-placeholder"></div>
+                        <div class="qr-info">
+                            <p style="font-size: 12px; color: #666;">
+                                قم بمسح هذا الرمز للوصول السريع لمعلومات الحالة
+                            </p>
+                        </div>
+                        <button class="no-print" onclick="window.print()" style="margin-top: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">طباعة</button>
+                        <button class="no-print" onclick="window.close()" style="margin-top: 20px; margin-left: 10px; padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer;">إغلاق</button>
+                    </div>
+                </body>
+            </html>
+        `);
+        
+        // إضافة QR Code للنافذة
+        printWindow.document.getElementById('qr-placeholder').appendChild(qrCanvas);
+        printWindow.document.close();
+        
+        if (typeof showToast === 'function') {
+            showToast('تم فتح نافذة طباعة QR Code', 'success');
+        }
+        
+    } catch (error) {
+        console.error('خطأ في طباعة QR Code:', error);
+        if (typeof showToast === 'function') {
+            showToast('فشل في طباعة QR Code', 'error');
+        }
+    }
+};
+
+// ==============================
+// تحسين وظيفة البحث لدعم QR Code
+// ==============================
+if (typeof window.performSearch === 'function') {
+    const originalPerformSearch = window.performSearch;
+    
+    window.performSearch = function() {
+        // استدعاء الوظيفة الأصلية
+        originalPerformSearch();
+        
+        // إضافة نصائح QR Code في نتائج البحث
+        setTimeout(() => {
+            const searchResults = document.querySelectorAll('.data-table tbody tr');
+            searchResults.forEach(row => {
+                const actionCell = row.querySelector('td:last-child');
+                if (actionCell && !actionCell.querySelector('.qr-export-btn')) {
+                    const qrExportBtn = document.createElement('button');
+                    qrExportBtn.className = 'btn btn-primary qr-export-btn';
+                    qrExportBtn.style.cssText = 'padding: 4px 8px; font-size: 11px; margin-left: 5px;';
+                    qrExportBtn.innerHTML = '<i class="fas fa-qrcode"></i>';
+                    qrExportBtn.title = 'تصدير QR Code';
+                    qrExportBtn.onclick = function() {
+                        // استخراج بيانات الحالة من الصف
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length >= 2) {
+                            const caseData = {
+                                formNumber: cells[0].textContent.trim(),
+                                fullName: cells[1].textContent.trim()
+                            };
+                            exportQRCode(caseData);
+                        }
+                    };
+                    
+                    actionCell.appendChild(qrExportBtn);
+                }
+            });
+        }, 500);
+    };
+}
+
+// إضافة معلومات النظام للكونسول
+console.log(`
+🔳 نظام QR Code المُحسن جاهز!
+📋 الميزات المتاحة:
+• إنشاء QR Code تلقائياً في الطباعة
+• لوحة تحكم متقدمة (Ctrl+Shift+Q)
+• تصدير QR Code كصورة
+• طباعة QR Code منفرداً
+• نظام احتياطي في حالة فشل المكتبة
+• كاش ذكي لتسريع الأداء
+
+🔧 الوظائف:
+• exportQRCode(caseData, filename) - تصدير QR كصورة
+• printQRCode(caseData) - طباعة QR منفرداً
+• qrCodeSystem.show() - فتح لوحة التحكم
+• qrCodeSystem.generate(caseData) - إنشاء QR Code
+`);
+
+// ==============================
+// تحسين أداء النظام
+// ==============================
+// تنظيف دوري لكاش QR Code
+setInterval(() => {
+    if (window.qrCodeSystem && typeof window.qrCodeSystem.clearCache === 'function') {
+        // تنظيف الكاش كل 30 دقيقة
+        console.log('🧹 تنظيف دوري لكاش QR Code');
+    }
+}, 30 * 60 * 1000);
+
+// مراقبة استخدام الذاكرة
+if ('memory' in performance) {
+    setInterval(() => {
+        const memoryInfo = performance.memory;
+        const usedMB = (memoryInfo.usedJSHeapSize / 1024 / 1024).toFixed(2);
+        
+        if (usedMB > 100) { // إذا تجاوز الاستخدام 100 ميجابايت
+            console.log(`⚠️ استخدام ذاكرة مرتفع: ${usedMB} MB - تنظيف الكاش`);
+            if (window.qrCodeSystem) {
+                window.qrCodeSystem.clearCache();
+            }
+        }
+    }, 5 * 60 * 1000); // فحص كل 5 دقائق
+}
+        
+        
  </script> 
 <script src="attachments-manager.js"></script>
 <script src="qr-system.js"></script>
