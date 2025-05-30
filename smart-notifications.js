@@ -1,7 +1,7 @@
 /**
  * نظام الإشعارات والتذكيرات الذكي المتكامل
- * ملف منفصل لإضافة نظام إشعارات شامل للنظام
- * يدعم الإشعارات المتعددة، التذكيرات، التقويم، والمتابعة
+ * ملف منفصل لإضافة نظام إشعارات وتذكيرات متقدم
+ * يدعم إشعارات المتصفح، التذكيرات الصوتية، والمواعيد المجدولة
  * 
  * الاستخدام: قم بتضمين هذا الملف في HTML الخاص بك
  * <script src="smart-notifications.js"></script>
@@ -12,133 +12,164 @@
 // ==============================
 const DEFAULT_NOTIFICATION_SETTINGS = {
     // إعدادات الإشعارات العامة
-    enableNotifications: true,
-    enableBrowserNotifications: true,
-    enableSounds: true,
-    enableVibration: true,
+    enabled: true,
+    browserNotifications: true,
+    soundNotifications: true,
+    visualNotifications: true,
+    vibrationEnabled: true,
     
     // إعدادات التذكيرات
-    enableReminders: true,
-    defaultReminderTime: 24, // ساعات قبل الموعد
-    snoozeTime: 10, // دقائق للتأجيل
-    maxReminders: 3, // عدد التذكيرات القصوى
+    remindersEnabled: true,
+    autoReminders: true,
+    reminderAdvanceTime: 30, // دقائق قبل الموعد
+    repeatReminders: true,
+    maxReminders: 3,
     
     // إعدادات الصوت
-    notificationSound: 'default',
     soundVolume: 0.7,
-    customSoundEnabled: false,
+    notificationSound: 'default', // default, chime, bell, alert
+    customSounds: {},
     
     // إعدادات المظهر
-    showNotificationPanel: true,
-    animationDuration: 300,
-    autoHideTimeout: 5000,
-    maxVisibleNotifications: 5,
+    position: 'top-right', // top-right, top-left, bottom-right, bottom-left
+    theme: 'modern', // modern, classic, minimal
+    showIcons: true,
+    showTimestamp: true,
+    autoHide: true,
+    hideDelay: 5000,
     
     // إعدادات التصنيف
-    categoryColors: {
-        'urgent': '#e74c3c',     // أحمر - عاجل
-        'reminder': '#f39c12',   // برتقالي - تذكير
-        'success': '#27ae60',    // أخضر - نجاح
-        'info': '#3498db',       // أزرق - معلومات
-        'warning': '#f1c40f',    // أصفر - تحذير
-        'appointment': '#9b59b6', // بنفسجي - موعد
-        'followup': '#1abc9c'    // تركوازي - متابعة
+    priorities: {
+        low: { color: '#3498db', duration: 3000 },
+        normal: { color: '#27ae60', duration: 5000 },
+        high: { color: '#f39c12', duration: 7000 },
+        urgent: { color: '#e74c3c', duration: 10000 }
     },
     
-    // إعدادات المهام
-    enableTasks: true,
-    taskAutoComplete: false,
-    showTaskProgress: true,
+    // إعدادات المهام والمواعيد
+    taskReminders: true,
+    appointmentReminders: true,
+    followUpReminders: true,
+    urgentCaseAlerts: true,
+    deadlineWarnings: true,
     
-    // إعدادات التقويم
-    enableCalendar: true,
-    calendarView: 'month', // month, week, day
-    firstDayOfWeek: 0, // 0 = أحد, 1 = اثنين
-    
-    // إعدادات البريد الإلكتروني (محاكاة)
-    enableEmailNotifications: false,
-    emailTemplate: 'default',
-    
-    // إعدادات الفترات
+    // إعدادات التوقيت
     workingHours: {
-        start: '08:00',
+        enabled: true,
+        start: '09:00',
         end: '17:00',
-        enabled: true
+        days: [1, 2, 3, 4, 5] // الأحد إلى الخميس
     },
     
-    quietHours: {
-        start: '22:00',
-        end: '08:00',
-        enabled: true
-    }
+    // إعدادات الإحصائيات
+    trackStatistics: true,
+    showNotificationHistory: true,
+    maxHistoryItems: 100
 };
 
 // ==============================
-// متغيرات النظام العامة
+// متغيرات النظام
 // ==============================
 let currentNotificationSettings = { ...DEFAULT_NOTIFICATION_SETTINGS };
-let notificationQueue = [];
-let activeNotifications = new Map();
-let remindersList = [];
-let tasksList = [];
-let calendarEvents = [];
+let notificationSystem = {
+    notifications: [],
+    reminders: [],
+    appointments: [],
+    tasks: [],
+    history: []
+};
+
 let notificationPanel = null;
-let notificationHistory = [];
-let notificationWorker = null;
+let calendarPanel = null;
+let notificationPermission = 'default';
+let activeNotifications = new Map();
+let activeTimers = new Map();
 
-// معرفات فريدة
-let notificationIdCounter = 1;
-let reminderIdCounter = 1;
-let taskIdCounter = 1;
-let eventIdCounter = 1;
+// أصوات الإشعارات المدمجة
+const NOTIFICATION_SOUNDS = {
+    default: {
+        frequency: 800,
+        duration: 300,
+        type: 'sine'
+    },
+    chime: {
+        frequencies: [523, 659, 784],
+        duration: 600,
+        type: 'sine'
+    },
+    bell: {
+        frequency: 1000,
+        duration: 400,
+        type: 'triangle'
+    },
+    alert: {
+        frequency: 600,
+        duration: 200,
+        repeat: 3,
+        type: 'sawtooth'
+    }
+};
 
-// مؤقتات النظام
-let reminderCheckInterval = null;
-let notificationCleanupInterval = null;
-let autoSaveInterval = null;
+// أنواع الإشعارات
+const NOTIFICATION_TYPES = {
+    INFO: 'info',
+    SUCCESS: 'success',
+    WARNING: 'warning',
+    ERROR: 'error',
+    REMINDER: 'reminder',
+    APPOINTMENT: 'appointment',
+    TASK: 'task',
+    URGENT: 'urgent'
+};
 
 // ==============================
 // تهيئة النظام
 // ==============================
 function initializeNotificationSystem() {
     try {
-        console.log('🔔 بدء تهيئة نظام الإشعارات الذكي...');
+        console.log('🔔 بدء تهيئة نظام الإشعارات والتذكيرات...');
         
-        // تحميل الإعدادات والبيانات المحفوظة
-        loadNotificationData();
+        // تحميل الإعدادات المحفوظة
+        loadNotificationSettings();
         
         // طلب أذونات الإشعارات
         requestNotificationPermissions();
         
-        // إنشاء واجهة الإشعارات
-        createNotificationUI();
-        
-        // بدء خدمات النظام
-        startNotificationServices();
+        // إنشاء واجهة النظام
+        createNotificationInterface();
         
         // إعداد مستمعي الأحداث
         setupNotificationEventListeners();
         
-        // بدء الحفظ التلقائي
-        startAutoSave();
+        // تهيئة نظام التذكيرات التلقائية
+        initializeAutoReminders();
         
-        // إشعار نجاح التهيئة
-        showNotification({
-            title: '🔔 نظام الإشعارات جاهز',
-            message: 'تم تهيئة نظام الإشعارات والتذكيرات بنجاح',
-            category: 'success',
-            priority: 'normal'
-        });
+        // بدء مراقبة النظام
+        startSystemMonitoring();
+        
+        // إضافة أزرار سريعة
+        addQuickActionButtons();
         
         console.log('✅ تم تهيئة نظام الإشعارات بنجاح');
         
+        // إشعار ترحيبي
+        showSmartNotification({
+            title: '🔔 نظام الإشعارات الذكي',
+            message: 'تم تفعيل النظام بنجاح! ستتلقى إشعارات وتذكيرات للمواعيد والمهام المهمة.',
+            type: NOTIFICATION_TYPES.SUCCESS,
+            priority: 'normal',
+            actions: [
+                { text: 'إعدادات', action: () => openNotificationPanel() },
+                { text: 'فهمت', action: null }
+            ]
+        });
+        
     } catch (error) {
         console.error('❌ خطأ في تهيئة نظام الإشعارات:', error);
-        showNotification({
-            title: '❌ خطأ في النظام',
+        showSmartNotification({
+            title: 'خطأ في النظام',
             message: 'فشل في تهيئة نظام الإشعارات',
-            category: 'urgent',
-            priority: 'high'
+            type: NOTIFICATION_TYPES.ERROR
         });
     }
 }
@@ -147,144 +178,321 @@ function initializeNotificationSystem() {
 // طلب أذونات الإشعارات
 // ==============================
 async function requestNotificationPermissions() {
-    if (!currentNotificationSettings.enableBrowserNotifications) {
-        return false;
-    }
-    
     if (!('Notification' in window)) {
-        console.warn('هذا المتصفح لا يدعم إشعارات المتصفح');
-        return false;
+        console.warn('المتصفح لا يدعم إشعارات الويب');
+        currentNotificationSettings.browserNotifications = false;
+        return;
     }
     
     try {
-        if (Notification.permission === 'default') {
+        notificationPermission = Notification.permission;
+        
+        if (notificationPermission === 'default') {
             const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                showNotification({
-                    title: '✅ تم منح الأذونات',
-                    message: 'يمكنك الآن تلقي إشعارات المتصفح',
-                    category: 'success',
-                    priority: 'normal'
-                });
-                return true;
-            } else {
-                showNotification({
-                    title: '⚠️ لم يتم منح الأذونات',
-                    message: 'لن تتلقى إشعارات المتصفح',
-                    category: 'warning',
-                    priority: 'normal'
-                });
-                return false;
-            }
+            notificationPermission = permission;
         }
         
-        return Notification.permission === 'granted';
+        if (notificationPermission === 'granted') {
+            console.log('✅ تم منح أذونات الإشعارات');
+        } else {
+            console.warn('⚠️ تم رفض أذونات الإشعارات');
+            currentNotificationSettings.browserNotifications = false;
+        }
         
     } catch (error) {
         console.error('خطأ في طلب أذونات الإشعارات:', error);
-        return false;
+        currentNotificationSettings.browserNotifications = false;
     }
 }
 
 // ==============================
-// إنشاء واجهة الإشعارات
+// إنشاء واجهة النظام
 // ==============================
-function createNotificationUI() {
-    // إنشاء حاوية الإشعارات العائمة
-    createFloatingNotificationContainer();
+function createNotificationInterface() {
+    // إنشاء حاوية الإشعارات
+    createNotificationContainer();
     
-    // إنشاء لوحة الإشعارات الجانبية
-    createNotificationPanel();
+    // إنشاء لوحة التحكم
+    createNotificationControlPanel();
     
-    // إنشاء نافذة إدارة التذكيرات
-    createReminderManagementModal();
-    
-    // إنشاء نافذة إدارة المهام
-    createTaskManagementModal();
-    
-    // إنشاء نافذة التقويم
-    createCalendarModal();
-    
-    // إنشاء لوحة التحكم في الإعدادات
-    createNotificationSettingsPanel();
-    
-    // إضافة أيقونة الإشعارات للشريط العلوي
-    addNotificationIconToHeader();
+    // إنشاء التقويم المدمج
+    createCalendarPanel();
     
     // إضافة الأنماط
     addNotificationStyles();
 }
 
-// ==============================
-// إنشاء حاوية الإشعارات العائمة
-// ==============================
-function createFloatingNotificationContainer() {
+function createNotificationContainer() {
     const container = document.createElement('div');
-    container.id = 'notification-container';
-    container.className = 'notification-container';
+    container.id = 'smart-notifications-container';
+    container.className = `notifications-container ${currentNotificationSettings.position}`;
     
     document.body.appendChild(container);
 }
 
-// ==============================
-// إنشاء لوحة الإشعارات الجانبية
-// ==============================
-function createNotificationPanel() {
+function createNotificationControlPanel() {
     const panel = document.createElement('div');
-    panel.id = 'notification-panel';
+    panel.id = 'notification-control-panel';
     panel.innerHTML = `
-        <div class="notification-panel-overlay">
+        <div class="notification-overlay">
             <div class="notification-panel-container">
                 <div class="notification-panel-header">
-                    <h3>🔔 مركز الإشعارات</h3>
-                    <div class="notification-panel-actions">
-                        <button class="notification-action-btn" onclick="markAllAsRead()" title="تحديد الكل كمقروء">
-                            <i class="fas fa-check-double"></i>
-                        </button>
-                        <button class="notification-action-btn" onclick="clearAllNotifications()" title="مسح الكل">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                        <button class="notification-action-btn" onclick="showNotificationSettings()" title="الإعدادات">
-                            <i class="fas fa-cog"></i>
-                        </button>
-                        <button class="notification-close-btn" onclick="closeNotificationPanel()">✕</button>
-                    </div>
+                    <h3>🔔 مركز الإشعارات والتذكيرات</h3>
+                    <button class="notification-close-btn" onclick="closeNotificationPanel()">✕</button>
                 </div>
                 
                 <div class="notification-panel-tabs">
-                    <button class="notification-tab active" onclick="showNotificationTab('all')">الكل</button>
-                    <button class="notification-tab" onclick="showNotificationTab('unread')">غير مقروء</button>
-                    <button class="notification-tab" onclick="showNotificationTab('reminders')">التذكيرات</button>
-                    <button class="notification-tab" onclick="showNotificationTab('tasks')">المهام</button>
+                    <button class="notification-tab-btn active" onclick="showNotificationTab('dashboard')">
+                        📊 لوحة التحكم
+                    </button>
+                    <button class="notification-tab-btn" onclick="showNotificationTab('reminders')">
+                        ⏰ التذكيرات
+                    </button>
+                    <button class="notification-tab-btn" onclick="showNotificationTab('appointments')">
+                        📅 المواعيد
+                    </button>
+                    <button class="notification-tab-btn" onclick="showNotificationTab('settings')">
+                        ⚙️ الإعدادات
+                    </button>
+                    <button class="notification-tab-btn" onclick="showNotificationTab('history')">
+                        📝 السجل
+                    </button>
                 </div>
                 
                 <div class="notification-panel-content">
-                    <div class="notification-tab-content active" id="all-notifications">
-                        <div id="all-notifications-list" class="notifications-list"></div>
+                    <!-- تبويب لوحة التحكم -->
+                    <div class="notification-tab-content active" id="dashboard-tab">
+                        <div class="notification-dashboard">
+                            <div class="notification-stats-grid">
+                                <div class="notification-stat-card">
+                                    <div class="stat-icon">📨</div>
+                                    <div class="stat-info">
+                                        <div class="stat-number" id="total-notifications">0</div>
+                                        <div class="stat-label">إجمالي الإشعارات</div>
+                                    </div>
+                                </div>
+                                <div class="notification-stat-card">
+                                    <div class="stat-icon">⏰</div>
+                                    <div class="stat-info">
+                                        <div class="stat-number" id="active-reminders">0</div>
+                                        <div class="stat-label">التذكيرات النشطة</div>
+                                    </div>
+                                </div>
+                                <div class="notification-stat-card">
+                                    <div class="stat-icon">📅</div>
+                                    <div class="stat-info">
+                                        <div class="stat-number" id="upcoming-appointments">0</div>
+                                        <div class="stat-label">المواعيد القادمة</div>
+                                    </div>
+                                </div>
+                                <div class="notification-stat-card">
+                                    <div class="stat-icon">🚨</div>
+                                    <div class="stat-info">
+                                        <div class="stat-number" id="urgent-items">0</div>
+                                        <div class="stat-label">العناصر العاجلة</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="notification-quick-actions">
+                                <h4>إجراءات سريعة</h4>
+                                <div class="quick-action-buttons">
+                                    <button class="quick-action-btn" onclick="createQuickReminder()">
+                                        ⏰ إنشاء تذكير سريع
+                                    </button>
+                                    <button class="quick-action-btn" onclick="scheduleAppointment()">
+                                        📅 جدولة موعد
+                                    </button>
+                                    <button class="quick-action-btn" onclick="createUrgentAlert()">
+                                        🚨 تنبيه عاجل
+                                    </button>
+                                    <button class="quick-action-btn" onclick="testNotificationSystem()">
+                                        🧪 اختبار النظام
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="notification-tab-content" id="unread-notifications">
-                        <div id="unread-notifications-list" class="notifications-list"></div>
+                    <!-- تبويب التذكيرات -->
+                    <div class="notification-tab-content" id="reminders-tab">
+                        <div class="reminders-section">
+                            <div class="section-header">
+                                <h4>⏰ إدارة التذكيرات</h4>
+                                <button class="add-reminder-btn" onclick="showAddReminderForm()">
+                                    ➕ إضافة تذكير
+                                </button>
+                            </div>
+                            
+                            <div class="add-reminder-form" id="add-reminder-form" style="display: none;">
+                                <div class="form-row">
+                                    <input type="text" id="reminder-title" placeholder="عنوان التذكير" class="form-input">
+                                    <select id="reminder-priority" class="form-select">
+                                        <option value="low">أولوية منخفضة</option>
+                                        <option value="normal" selected>أولوية عادية</option>
+                                        <option value="high">أولوية عالية</option>
+                                        <option value="urgent">عاجل</option>
+                                    </select>
+                                </div>
+                                <div class="form-row">
+                                    <input type="datetime-local" id="reminder-datetime" class="form-input">
+                                    <select id="reminder-repeat" class="form-select">
+                                        <option value="none">لا يتكرر</option>
+                                        <option value="daily">يومياً</option>
+                                        <option value="weekly">أسبوعياً</option>
+                                        <option value="monthly">شهرياً</option>
+                                    </select>
+                                </div>
+                                <textarea id="reminder-description" placeholder="وصف التذكير (اختياري)" class="form-textarea"></textarea>
+                                <div class="form-actions">
+                                    <button onclick="saveReminder()" class="save-btn">حفظ التذكير</button>
+                                    <button onclick="hideAddReminderForm()" class="cancel-btn">إلغاء</button>
+                                </div>
+                            </div>
+                            
+                            <div class="reminders-list" id="reminders-list">
+                                <!-- سيتم ملؤها ديناميكياً -->
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="notification-tab-content" id="reminders-notifications">
-                        <div id="reminders-list" class="notifications-list"></div>
+                    <!-- تبويب المواعيد -->
+                    <div class="notification-tab-content" id="appointments-tab">
+                        <div class="appointments-section">
+                            <div class="section-header">
+                                <h4>📅 إدارة المواعيد</h4>
+                                <button class="add-appointment-btn" onclick="showAddAppointmentForm()">
+                                    ➕ إضافة موعد
+                                </button>
+                            </div>
+                            
+                            <div class="mini-calendar" id="mini-calendar">
+                                <!-- تقويم مصغر -->
+                            </div>
+                            
+                            <div class="appointments-list" id="appointments-list">
+                                <!-- قائمة المواعيد -->
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="notification-tab-content" id="tasks-notifications">
-                        <div id="tasks-list" class="notifications-list"></div>
+                    <!-- تبويب الإعدادات -->
+                    <div class="notification-tab-content" id="settings-tab">
+                        <div class="notification-settings">
+                            <div class="settings-section">
+                                <h4>🔔 إعدادات الإشعارات</h4>
+                                <div class="setting-item">
+                                    <label>تفعيل الإشعارات</label>
+                                    <input type="checkbox" id="setting-enabled" onchange="updateNotificationSettings()">
+                                </div>
+                                <div class="setting-item">
+                                    <label>إشعارات المتصفح</label>
+                                    <input type="checkbox" id="setting-browser" onchange="updateNotificationSettings()">
+                                </div>
+                                <div class="setting-item">
+                                    <label>الإشعارات الصوتية</label>
+                                    <input type="checkbox" id="setting-sound" onchange="updateNotificationSettings()">
+                                </div>
+                                <div class="setting-item">
+                                    <label>الاهتزاز</label>
+                                    <input type="checkbox" id="setting-vibration" onchange="updateNotificationSettings()">
+                                </div>
+                            </div>
+                            
+                            <div class="settings-section">
+                                <h4>⏰ إعدادات التذكيرات</h4>
+                                <div class="setting-item">
+                                    <label>التذكيرات التلقائية</label>
+                                    <input type="checkbox" id="setting-auto-reminders" onchange="updateNotificationSettings()">
+                                </div>
+                                <div class="setting-item">
+                                    <label>وقت التذكير المسبق (دقائق)</label>
+                                    <input type="number" id="setting-advance-time" min="5" max="1440" onchange="updateNotificationSettings()">
+                                </div>
+                                <div class="setting-item">
+                                    <label>تكرار التذكيرات</label>
+                                    <input type="checkbox" id="setting-repeat" onchange="updateNotificationSettings()">
+                                </div>
+                            </div>
+                            
+                            <div class="settings-section">
+                                <h4>🎵 إعدادات الصوت</h4>
+                                <div class="setting-item">
+                                    <label>مستوى الصوت</label>
+                                    <input type="range" id="setting-volume" min="0" max="1" step="0.1" onchange="updateNotificationSettings()">
+                                    <span id="volume-display">70%</span>
+                                </div>
+                                <div class="setting-item">
+                                    <label>نوع الصوت</label>
+                                    <select id="setting-sound-type" onchange="updateNotificationSettings()">
+                                        <option value="default">افتراضي</option>
+                                        <option value="chime">نغمة</option>
+                                        <option value="bell">جرس</option>
+                                        <option value="alert">تنبيه</option>
+                                    </select>
+                                    <button onclick="testNotificationSound()" class="test-sound-btn">🔊 تجربة</button>
+                                </div>
+                            </div>
+                            
+                            <div class="settings-section">
+                                <h4>🎨 إعدادات المظهر</h4>
+                                <div class="setting-item">
+                                    <label>موقع الإشعارات</label>
+                                    <select id="setting-position" onchange="updateNotificationSettings()">
+                                        <option value="top-right">أعلى يمين</option>
+                                        <option value="top-left">أعلى يسار</option>
+                                        <option value="bottom-right">أسفل يمين</option>
+                                        <option value="bottom-left">أسفل يسار</option>
+                                    </select>
+                                </div>
+                                <div class="setting-item">
+                                    <label>مدة العرض (ثانية)</label>
+                                    <input type="number" id="setting-duration" min="1" max="30" onchange="updateNotificationSettings()">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- تبويب السجل -->
+                    <div class="notification-tab-content" id="history-tab">
+                        <div class="notification-history">
+                            <div class="section-header">
+                                <h4>📝 سجل الإشعارات</h4>
+                                <button onclick="clearNotificationHistory()" class="clear-history-btn">
+                                    🗑️ مسح السجل
+                                </button>
+                            </div>
+                            
+                            <div class="history-filters">
+                                <select id="history-filter-type">
+                                    <option value="all">جميع الأنواع</option>
+                                    <option value="reminder">تذكيرات</option>
+                                    <option value="appointment">مواعيد</option>
+                                    <option value="urgent">عاجل</option>
+                                </select>
+                                <input type="date" id="history-filter-date">
+                                <button onclick="filterNotificationHistory()">فلترة</button>
+                            </div>
+                            
+                            <div class="history-list" id="history-list">
+                                <!-- سجل الإشعارات -->
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="notification-panel-footer">
-                    <button class="notification-btn primary" onclick="showAddReminderModal()">
-                        <i class="fas fa-plus"></i> تذكير جديد
+                    <button class="panel-btn save-btn" onclick="saveNotificationSettings()">
+                        💾 حفظ الإعدادات
                     </button>
-                    <button class="notification-btn secondary" onclick="showAddTaskModal()">
-                        <i class="fas fa-tasks"></i> مهمة جديدة
+                    <button class="panel-btn export-btn" onclick="exportNotificationData()">
+                        📤 تصدير البيانات
                     </button>
-                    <button class="notification-btn info" onclick="showCalendarModal()">
-                        <i class="fas fa-calendar"></i> التقويم
+                    <button class="panel-btn import-btn" onclick="importNotificationData()">
+                        📥 استيراد البيانات
+                    </button>
+                    <button class="panel-btn reset-btn" onclick="resetNotificationSettings()">
+                        🔄 إعادة تعيين
                     </button>
                 </div>
             </div>
@@ -293,275 +501,253 @@ function createNotificationPanel() {
     
     document.body.appendChild(panel);
     notificationPanel = panel;
+    
+    // تحديث القيم في النموذج
+    updateSettingsForm();
 }
 
 // ==============================
-// إضافة أيقونة الإشعارات للشريط العلوي
-// ==============================
-function addNotificationIconToHeader() {
-    const headerActions = document.querySelector('.header-actions');
-    if (!headerActions) return;
-    
-    const notificationIcon = document.createElement('div');
-    notificationIcon.className = 'notification-icon-container';
-    notificationIcon.innerHTML = `
-        <button class="notification-icon-btn" onclick="toggleNotificationPanel()" title="الإشعارات">
-            <i class="fas fa-bell"></i>
-            <span class="notification-badge" id="notification-badge">0</span>
-        </button>
-    `;
-    
-    // إدراج الأيقونة قبل معلومات المستخدم
-    headerActions.insertBefore(notificationIcon, headerActions.firstChild);
-}
-
-// ==============================
-// إنشاء الأنماط
+// إنشاء الأنماط CSS
 // ==============================
 function addNotificationStyles() {
-    if (document.getElementById('notification-styles')) return;
+    if (document.getElementById('smart-notification-styles')) return;
     
     const styles = document.createElement('style');
-    styles.id = 'notification-styles';
+    styles.id = 'smart-notification-styles';
     styles.textContent = `
-        /* حاوية الإشعارات العائمة */
-        .notification-container {
+        /* حاوية الإشعارات */
+        .notifications-container {
             position: fixed;
-            top: 80px;
-            right: 20px;
             z-index: 10000;
             pointer-events: none;
             max-width: 400px;
             width: 100%;
         }
         
-        /* الإشعار المفرد */
-        .notification-item {
+        .notifications-container.top-right {
+            top: 20px;
+            right: 20px;
+        }
+        
+        .notifications-container.top-left {
+            top: 20px;
+            left: 20px;
+        }
+        
+        .notifications-container.bottom-right {
+            bottom: 20px;
+            right: 20px;
+        }
+        
+        .notifications-container.bottom-left {
+            bottom: 20px;
+            left: 20px;
+        }
+        
+        /* الإشعار الفردي */
+        .smart-notification {
             background: white;
             border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
             margin-bottom: 12px;
             padding: 16px;
-            border-left: 4px solid #3498db;
-            transform: translateX(100%);
-            opacity: 0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: auto;
-            backdrop-filter: blur(10px);
+            transform: translateX(100%);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-left: 4px solid #3498db;
             position: relative;
             overflow: hidden;
+            backdrop-filter: blur(10px);
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         
-        .notification-item.show {
+        .smart-notification.show {
             transform: translateX(0);
-            opacity: 1;
         }
         
-        .notification-item.urgent {
-            border-left-color: #e74c3c;
-            animation: urgentPulse 1s infinite;
+        .smart-notification.hide {
+            transform: translateX(100%);
+            opacity: 0;
         }
         
-        .notification-item.reminder {
-            border-left-color: #f39c12;
+        /* أنواع الإشعارات */
+        .smart-notification.info {
+            border-left-color: #3498db;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
         }
         
-        .notification-item.success {
+        .smart-notification.success {
             border-left-color: #27ae60;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fff8 100%);
         }
         
-        .notification-item.warning {
-            border-left-color: #f1c40f;
+        .smart-notification.warning {
+            border-left-color: #f39c12;
+            background: linear-gradient(135deg, #ffffff 0%, #fffbf0 100%);
         }
         
-        .notification-item.appointment {
+        .smart-notification.error {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #ffffff 0%, #fff8f8 100%);
+        }
+        
+        .smart-notification.reminder {
             border-left-color: #9b59b6;
+            background: linear-gradient(135deg, #ffffff 0%, #fcf8ff 100%);
         }
         
-        .notification-item.followup {
-            border-left-color: #1abc9c;
+        .smart-notification.urgent {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #ffe6e6 0%, #ffcccc 100%);
+            animation: urgentPulse 2s infinite;
         }
         
         @keyframes urgentPulse {
-            0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); }
+            0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); }
             50% { box-shadow: 0 8px 32px rgba(231, 76, 60, 0.3); }
         }
         
-        .notification-header {
+        /* أيقونة الإشعار */
+        .notification-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 8px;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .notification-icon.info { background: #ebf3fd; color: #3498db; }
+        .notification-icon.success { background: #edf7ed; color: #27ae60; }
+        .notification-icon.warning { background: #fef5e7; color: #f39c12; }
+        .notification-icon.error { background: #fdebea; color: #e74c3c; }
+        .notification-icon.reminder { background: #f4ecf7; color: #9b59b6; }
+        .notification-icon.urgent { background: #fdebea; color: #e74c3c; }
+        
+        /* محتوى الإشعار */
+        .notification-content {
+            flex: 1;
+            min-width: 0;
         }
         
         .notification-title {
             font-weight: 600;
-            font-size: 14px;
-            color: #2c3e50;
+            font-size: 16px;
             margin-bottom: 4px;
-            line-height: 1.3;
-            flex: 1;
-        }
-        
-        .notification-time {
-            font-size: 11px;
-            color: #7f8c8d;
-            white-space: nowrap;
-            margin-left: 8px;
+            color: #2c3e50;
+            line-height: 1.2;
         }
         
         .notification-message {
-            font-size: 13px;
-            color: #34495e;
+            font-size: 14px;
+            color: #546e7a;
             line-height: 1.4;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         
+        .notification-timestamp {
+            font-size: 11px;
+            color: #90a4ae;
+            margin-bottom: 8px;
+        }
+        
+        /* أزرار الإجراءات */
         .notification-actions {
             display: flex;
             gap: 8px;
-            justify-content: flex-end;
+            flex-wrap: wrap;
         }
         
-        .notification-action {
-            background: none;
-            border: 1px solid #bdc3c7;
-            color: #34495e;
+        .notification-action-btn {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            color: #3498db;
             padding: 6px 12px;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 12px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s;
+            font-weight: 500;
         }
         
-        .notification-action:hover {
-            background: #ecf0f1;
-        }
-        
-        .notification-action.primary {
+        .notification-action-btn:hover {
             background: #3498db;
             color: white;
-            border-color: #3498db;
         }
         
-        .notification-action.primary:hover {
-            background: #2980b9;
-        }
-        
+        /* زر الإغلاق */
         .notification-close {
             position: absolute;
             top: 8px;
             right: 8px;
-            background: none;
+            background: rgba(0, 0, 0, 0.1);
             border: none;
-            color: #bdc3c7;
-            cursor: pointer;
-            font-size: 16px;
+            border-radius: 50%;
             width: 24px;
             height: 24px;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: color 0.2s;
+            font-size: 12px;
+            opacity: 0.7;
+            transition: all 0.3s;
         }
         
         .notification-close:hover {
-            color: #e74c3c;
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.2);
         }
         
-        /* أيقونة الإشعارات في الشريط العلوي */
-        .notification-icon-container {
-            position: relative;
-        }
-        
-        .notification-icon-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 8px 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-        }
-        
-        .notification-icon-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
-        }
-        
-        .notification-badge {
+        /* شريط التقدم */
+        .notification-progress {
             position: absolute;
-            top: -2px;
-            right: -2px;
-            background: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 10px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid white;
-            min-width: 18px;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            transition: width linear;
+            border-radius: 0 0 8px 8px;
         }
         
-        .notification-badge.hidden {
-            display: none;
-        }
-        
-        .notification-badge.pulse {
-            animation: badgePulse 1s infinite;
-        }
-        
-        @keyframes badgePulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-        }
-        
-        /* لوحة الإشعارات الجانبية */
-        .notification-panel-overlay {
+        /* لوحة التحكم */
+        .notification-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
             z-index: 10001;
             display: none;
-            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
         
-        .notification-panel-overlay.show {
-            display: block;
+        .notification-overlay.show {
+            display: flex;
         }
         
         .notification-panel-container {
-            position: absolute;
-            right: 0;
-            top: 0;
-            width: 400px;
-            max-width: 90vw;
-            height: 100vh;
             background: white;
-            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
             display: flex;
             flex-direction: column;
         }
         
-        .notification-panel-overlay.show .notification-panel-container {
-            transform: translateX(0);
-        }
-        
+        /* رأس اللوحة */
         .notification-panel-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -573,292 +759,449 @@ function addNotificationStyles() {
         
         .notification-panel-header h3 {
             margin: 0;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 600;
-        }
-        
-        .notification-panel-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        
-        .notification-action-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-        
-        .notification-action-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
         }
         
         .notification-close-btn {
             background: rgba(255, 255, 255, 0.2);
             border: none;
             color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
             cursor: pointer;
+            font-size: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
-            transition: background 0.2s;
+            transition: background 0.3s;
         }
         
         .notification-close-btn:hover {
-            background: rgba(231, 76, 60, 0.8);
+            background: rgba(255, 255, 255, 0.3);
         }
         
+        /* تبويبات اللوحة */
         .notification-panel-tabs {
             display: flex;
             background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid #e3e6f0;
+            overflow-x: auto;
         }
         
-        .notification-tab {
-            flex: 1;
+        .notification-tab-btn {
             background: none;
             border: none;
-            padding: 12px 8px;
+            padding: 15px 20px;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
             color: #6c757d;
-            transition: all 0.2s;
-            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            min-width: 120px;
         }
         
-        .notification-tab:hover {
+        .notification-tab-btn:hover {
             background: #e9ecef;
             color: #495057;
         }
         
-        .notification-tab.active {
-            color: #3498db;
-            border-bottom-color: #3498db;
+        .notification-tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
             background: white;
         }
         
+        /* محتوى اللوحة */
         .notification-panel-content {
             flex: 1;
             overflow-y: auto;
+            padding: 20px;
         }
         
         .notification-tab-content {
             display: none;
-            height: 100%;
         }
         
         .notification-tab-content.active {
             display: block;
         }
         
-        .notifications-list {
-            padding: 16px;
+        /* لوحة التحكم الرئيسية */
+        .notification-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
         }
         
-        .notification-list-item {
-            background: white;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
+        .notification-stat-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid #e3e6f0;
+            transition: transform 0.3s;
         }
         
-        .notification-list-item:hover {
-            background: #f8f9fa;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        .notification-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
         
-        .notification-list-item.unread {
-            border-left: 4px solid #3498db;
-            background: #f8f9ff;
+        .stat-icon {
+            font-size: 32px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
         
-        .notification-list-item.urgent {
-            border-left: 4px solid #e74c3c;
-            background: #fff5f5;
+        .stat-info {
+            flex: 1;
         }
         
-        .notification-list-title {
-            font-weight: 600;
-            font-size: 13px;
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
             color: #2c3e50;
+            line-height: 1;
             margin-bottom: 4px;
         }
         
-        .notification-list-message {
-            font-size: 12px;
-            color: #34495e;
-            line-height: 1.4;
-            margin-bottom: 8px;
-        }
-        
-        .notification-list-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            color: #7f8c8d;
-        }
-        
-        .notification-list-category {
-            background: #ecf0f1;
-            color: #2c3e50;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 10px;
+        .stat-label {
+            font-size: 14px;
+            color: #6c757d;
             font-weight: 500;
         }
         
-        .notification-panel-footer {
-            background: #f8f9fa;
-            padding: 16px;
-            border-top: 1px solid #e9ecef;
+        /* الإجراءات السريعة */
+        .notification-quick-actions {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e3e6f0;
+        }
+        
+        .notification-quick-actions h4 {
+            margin: 0 0 16px 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        
+        .quick-action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        
+        .quick-action-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
             display: flex;
+            align-items: center;
+            justify-content: center;
             gap: 8px;
         }
         
-        .notification-btn {
-            background: #3498db;
+        .quick-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+        }
+        
+        /* النماذج */
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid #e3e6f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .save-btn, .cancel-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .save-btn {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .save-btn:hover {
+            background: #219a52;
+        }
+        
+        .cancel-btn {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .cancel-btn:hover {
+            background: #5a6268;
+        }
+        
+        /* الإعدادات */
+        .settings-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e3e6f0;
+        }
+        
+        .settings-section h4 {
+            margin: 0 0 16px 0;
+            color: #2c3e50;
+            font-size: 16px;
+            font-weight: 600;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e3e6f0;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-item label {
+            font-weight: 500;
+            color: #495057;
+            flex: 1;
+        }
+        
+        .setting-item input, .setting-item select {
+            max-width: 200px;
+        }
+        
+        .test-sound-btn {
+            background: #17a2b8;
             color: white;
             border: none;
-            padding: 8px 12px;
+            padding: 6px 12px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
-            font-weight: 500;
-            transition: background 0.2s;
+            margin-left: 8px;
+        }
+        
+        /* تذييل اللوحة */
+        .notification-panel-footer {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e3e6f0;
             display: flex;
-            align-items: center;
-            gap: 4px;
-            flex: 1;
+            gap: 12px;
+            flex-wrap: wrap;
             justify-content: center;
         }
         
-        .notification-btn:hover {
-            background: #2980b9;
-        }
-        
-        .notification-btn.secondary {
-            background: #95a5a6;
-        }
-        
-        .notification-btn.secondary:hover {
-            background: #7f8c8d;
-        }
-        
-        .notification-btn.info {
-            background: #1abc9c;
-        }
-        
-        .notification-btn.info:hover {
-            background: #16a085;
-        }
-        
-        /* حالة فارغة */
-        .notification-empty {
-            text-align: center;
-            padding: 40px 20px;
-            color: #7f8c8d;
-        }
-        
-        .notification-empty i {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-        
-        .notification-empty p {
+        .panel-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
             font-size: 14px;
-            margin: 0;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .panel-btn.save-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .panel-btn.export-btn {
+            background: #6f42c1;
+            color: white;
+        }
+        
+        .panel-btn.import-btn {
+            background: #fd7e14;
+            color: white;
+        }
+        
+        .panel-btn.reset-btn {
+            background: #dc3545;
+            color: white;
+        }
+        
+        /* الأزرار السريعة العائمة */
+        .notification-quick-button {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .notification-quick-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
         }
         
         /* تحسينات للهواتف */
         @media (max-width: 768px) {
-            .notification-container {
-                right: 10px;
-                left: 10px;
-                max-width: none;
+            .notifications-container {
+                max-width: calc(100vw - 40px);
+                left: 20px !important;
+                right: 20px !important;
             }
             
             .notification-panel-container {
-                width: 100vw;
-                max-width: 100vw;
+                max-height: 95vh;
+                width: 100%;
+                margin: 0;
             }
             
-            .notification-item {
-                margin-bottom: 8px;
-                padding: 12px;
+            .notification-panel-tabs {
+                flex-wrap: wrap;
             }
             
-            .notification-title {
-                font-size: 13px;
-            }
-            
-            .notification-message {
+            .notification-tab-btn {
+                flex: 1;
+                min-width: auto;
+                padding: 12px 10px;
                 font-size: 12px;
+            }
+            
+            .notification-stats-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .quick-action-buttons {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 8px;
             }
             
             .notification-panel-footer {
                 flex-direction: column;
             }
             
-            .notification-btn {
+            .panel-btn {
+                width: 100%;
                 justify-content: center;
+            }
+            
+            .smart-notification {
+                margin-left: 10px;
+                margin-right: 10px;
             }
         }
         
-        /* تأثيرات إضافية */
-        .notification-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(52, 152, 219, 0.5), transparent);
-            animation: shimmer 2s infinite;
+        /* انيميشن للإشعارات */
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
         
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        @keyframes slideInLeft {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
         
-        .notification-item.priority-high {
-            border-left-width: 6px;
-            background: linear-gradient(135deg, #fff, #fff8f8);
+        .notifications-container.top-left .smart-notification,
+        .notifications-container.bottom-left .smart-notification {
+            transform: translateX(-100%);
+        }
+        
+        .notifications-container.top-left .smart-notification.show,
+        .notifications-container.bottom-left .smart-notification.show {
+            animation: slideInLeft 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateX(0);
+        }
+        
+        /* تحسينات الأداء */
+        .smart-notification {
+            will-change: transform, opacity;
         }
         
         .notification-progress {
-            height: 2px;
-            background: #ecf0f1;
-            border-radius: 1px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-        
-        .notification-progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #3498db, #2980b9);
-            border-radius: 1px;
-            transition: width 0.3s ease;
+            will-change: width;
         }
     `;
     
@@ -866,865 +1209,878 @@ function addNotificationStyles() {
 }
 
 // ==============================
-// إظهار الإشعارات
+// إظهار الإشعارات الذكية
 // ==============================
-function showNotification(options) {
-    const notification = {
-        id: generateNotificationId(),
-        title: options.title || 'إشعار',
-        message: options.message || '',
-        category: options.category || 'info',
-        priority: options.priority || 'normal',
-        timestamp: new Date(),
-        read: false,
-        actions: options.actions || [],
-        data: options.data || {},
-        autoHide: options.autoHide !== false,
-        sound: options.sound !== false,
-        persistent: options.persistent || false
-    };
+function showSmartNotification(options = {}) {
+    const {
+        title = 'إشعار',
+        message = '',
+        type = NOTIFICATION_TYPES.INFO,
+        priority = 'normal',
+        duration = null,
+        actions = [],
+        icon = null,
+        sound = true,
+        persistent = false,
+        data = {}
+    } = options;
     
-    // إضافة للقائمة والتاريخ
-    activeNotifications.set(notification.id, notification);
-    notificationHistory.push(notification);
+    // إنشاء معرف فريد للإشعار
+    const notificationId = 'notification_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
-    // إنشاء الإشعار البصري
-    createVisualNotification(notification);
+    // تحديد مدة العرض حسب الأولوية
+    const displayDuration = duration || currentNotificationSettings.priorities[priority]?.duration || 5000;
+    
+    // إنشاء عنصر الإشعار
+    const notification = createNotificationElement({
+        id: notificationId,
+        title,
+        message,
+        type,
+        priority,
+        actions,
+        icon,
+        persistent,
+        data
+    });
+    
+    // إضافة الإشعار للحاوية
+    const container = document.getElementById('smart-notifications-container');
+    if (container) {
+        container.appendChild(notification);
+        
+        // إظهار الإشعار مع تأخير قصير
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+        
+        // إضافة شريط التقدم إذا لم يكن دائماً
+        if (!persistent && displayDuration > 0) {
+            addProgressBar(notification, displayDuration);
+        }
+        
+        // حفظ مرجع الإشعار
+        activeNotifications.set(notificationId, {
+            element: notification,
+            data: { title, message, type, priority, timestamp: new Date(), ...data }
+        });
+        
+        // إزالة الإشعار تلقائياً
+        if (!persistent && displayDuration > 0) {
+            const timer = setTimeout(() => {
+                hideNotification(notificationId);
+            }, displayDuration);
+            
+            activeTimers.set(notificationId, timer);
+        }
+    }
     
     // إشعار المتصفح
-    if (currentNotificationSettings.enableBrowserNotifications) {
-        createBrowserNotification(notification);
+    if (currentNotificationSettings.browserNotifications && notificationPermission === 'granted') {
+        showBrowserNotification(title, message, icon);
     }
     
     // تشغيل الصوت
-    if (currentNotificationSettings.enableSounds && notification.sound) {
-        playNotificationSound(notification.category);
+    if (sound && currentNotificationSettings.soundNotifications) {
+        playNotificationSound(type);
     }
     
     // الاهتزاز
-    if (currentNotificationSettings.enableVibration && navigator.vibrate) {
-        const pattern = getVibrationPattern(notification.priority);
-        navigator.vibrate(pattern);
+    if (currentNotificationSettings.vibrationEnabled && navigator.vibrate) {
+        const vibrationPattern = priority === 'urgent' ? [200, 100, 200, 100, 200] : [100];
+        navigator.vibrate(vibrationPattern);
     }
     
-    // تحديث العدادات
-    updateNotificationBadge();
-    updateNotificationPanel();
+    // إضافة للسجل
+    addToNotificationHistory({
+        id: notificationId,
+        title,
+        message,
+        type,
+        priority,
+        timestamp: new Date(),
+        ...data
+    });
     
-    // حفظ تلقائي
-    saveNotificationData();
+    // تحديث الإحصائيات
+    updateNotificationStatistics();
     
-    return notification.id;
+    return notificationId;
 }
 
 // ==============================
-// إنشاء الإشعار البصري
+// إنشاء عنصر الإشعار
 // ==============================
-function createVisualNotification(notification) {
-    const container = document.getElementById('notification-container');
-    if (!container) return;
+function createNotificationElement(options) {
+    const {
+        id,
+        title,
+        message,
+        type,
+        priority,
+        actions,
+        icon,
+        persistent,
+        data
+    } = options;
     
-    const notificationElement = document.createElement('div');
-    notificationElement.className = `notification-item ${notification.category}`;
-    notificationElement.id = `notification-${notification.id}`;
+    const notification = document.createElement('div');
+    notification.className = `smart-notification ${type} priority-${priority}`;
+    notification.id = id;
+    notification.setAttribute('data-notification-id', id);
     
-    if (notification.priority === 'high') {
-        notificationElement.classList.add('priority-high');
-    }
+    // أيقونة الإشعار
+    const iconClass = icon || getDefaultIcon(type);
     
-    notificationElement.innerHTML = `
-        <button class="notification-close" onclick="dismissNotification('${notification.id}')">×</button>
-        <div class="notification-header">
-            <div class="notification-title">${notification.title}</div>
-            <div class="notification-time">${formatTimeAgo(notification.timestamp)}</div>
+    // إنشاء HTML الإشعار
+    notification.innerHTML = `
+        <div class="notification-icon ${type}">
+            ${iconClass}
         </div>
-        <div class="notification-message">${notification.message}</div>
-        ${notification.actions.length > 0 ? `
-            <div class="notification-actions">
-                ${notification.actions.map(action => `
-                    <button class="notification-action ${action.class || ''}" 
-                            onclick="executeNotificationAction('${notification.id}', '${action.id}')">
-                        ${action.label}
-                    </button>
-                `).join('')}
-            </div>
-        ` : ''}
-        ${notification.persistent ? '<div class="notification-progress"><div class="notification-progress-bar" style="width: 100%"></div></div>' : ''}
+        <div class="notification-content">
+            <div class="notification-title">${title}</div>
+            <div class="notification-message">${message}</div>
+            <div class="notification-timestamp">${formatNotificationTime(new Date())}</div>
+            ${actions.length > 0 ? `
+                <div class="notification-actions">
+                    ${actions.map((action, index) => `
+                        <button class="notification-action-btn" data-action-index="${index}">
+                            ${action.text}
+                        </button>
+                    `).join('')}
+                </div>
+            ` : ''}
+        </div>
+        ${!persistent ? '<button class="notification-close">✕</button>' : ''}
     `;
     
-    container.appendChild(notificationElement);
+    // إعداد أحداث الأزرار
+    setupNotificationEvents(notification, actions, id);
     
-    // تأثير الظهور
-    setTimeout(() => {
-        notificationElement.classList.add('show');
-    }, 100);
-    
-    // إخفاء تلقائي
-    if (notification.autoHide && !notification.persistent) {
-        setTimeout(() => {
-            dismissNotification(notification.id);
-        }, currentNotificationSettings.autoHideTimeout);
-    }
-    
-    // تحديد عدد الإشعارات المرئية
-    limitVisibleNotifications();
+    return notification;
 }
 
 // ==============================
-// إشعار المتصفح
+// إعداد أحداث الإشعار
 // ==============================
-function createBrowserNotification(notification) {
-    if (Notification.permission !== 'granted') return;
-    
-    try {
-        const browserNotification = new Notification(notification.title, {
-            body: notification.message,
-            icon: getNotificationIcon(notification.category),
-            badge: '/favicon.ico',
-            tag: notification.id,
-            requireInteraction: notification.priority === 'high',
-            silent: !currentNotificationSettings.enableSounds
+function setupNotificationEvents(notification, actions, notificationId) {
+    // زر الإغلاق
+    const closeBtn = notification.querySelector('.notification-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            hideNotification(notificationId);
         });
+    }
+    
+    // أزرار الإجراءات
+    const actionBtns = notification.querySelectorAll('.notification-action-btn');
+    actionBtns.forEach((btn, index) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            const action = actions[index];
+            if (action && action.action && typeof action.action === 'function') {
+                action.action();
+            }
+            
+            // إخفاء الإشعار بعد تنفيذ الإجراء
+            hideNotification(notificationId);
+        });
+    });
+    
+    // النقر على الإشعار نفسه
+    notification.addEventListener('click', () => {
+        // يمكن إضافة إجراء افتراضي هنا
+        console.log('تم النقر على الإشعار:', notificationId);
+    });
+}
+
+// ==============================
+// إخفاء الإشعار
+// ==============================
+function hideNotification(notificationId) {
+    const notificationData = activeNotifications.get(notificationId);
+    if (!notificationData) return;
+    
+    const notification = notificationData.element;
+    
+    // إضافة كلاس الإخفاء
+    notification.classList.add('hide');
+    
+    // إزالة من DOM بعد انتهاء الانيميشن
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 400);
+    
+    // تنظيف المراجع
+    activeNotifications.delete(notificationId);
+    
+    const timer = activeTimers.get(notificationId);
+    if (timer) {
+        clearTimeout(timer);
+        activeTimers.delete(notificationId);
+    }
+    
+    // تحديث الإحصائيات
+    updateNotificationStatistics();
+}
+
+// ==============================
+// إضافة شريط التقدم
+// ==============================
+function addProgressBar(notification, duration) {
+    const progressBar = document.createElement('div');
+    progressBar.className = 'notification-progress';
+    progressBar.style.width = '100%';
+    
+    notification.appendChild(progressBar);
+    
+    // تحريك شريط التقدم
+    setTimeout(() => {
+        progressBar.style.transition = `width ${duration}ms linear`;
+        progressBar.style.width = '0%';
+    }, 100);
+}
+
+// ==============================
+// التذكيرات التلقائية
+// ==============================
+function initializeAutoReminders() {
+    if (!currentNotificationSettings.autoReminders) return;
+    
+    // مراقبة الحالات التي تحتاج متابعة
+    setInterval(() => {
+        checkForAutoReminders();
+    }, 60000); // كل دقيقة
+    
+    console.log('🔄 تم تفعيل نظام التذكيرات التلقائية');
+}
+
+function checkForAutoReminders() {
+    try {
+        // التحقق من وجود بيانات الحالات (من النظام الرئيسي)
+        if (typeof casesData !== 'undefined' && Array.isArray(casesData)) {
+            casesData.forEach(caseItem => {
+                checkCaseForReminders(caseItem);
+            });
+        }
         
-        browserNotification.onclick = function() {
-            window.focus();
-            toggleNotificationPanel();
-            this.close();
-        };
+        // التحقق من التذكيرات المجدولة
+        checkScheduledReminders();
         
-        // إغلاق تلقائي
-        setTimeout(() => {
-            browserNotification.close();
-        }, 5000);
+        // التحقق من المواعيد القادمة
+        checkUpcomingAppointments();
         
     } catch (error) {
-        console.error('خطأ في إنشاء إشعار المتصفح:', error);
+        console.error('خطأ في فحص التذكيرات التلقائية:', error);
+    }
+}
+
+function checkCaseForReminders(caseItem) {
+    if (!caseItem || !caseItem.id) return;
+    
+    const caseDate = new Date(caseItem.createdAt || caseItem.caseDate);
+    const now = new Date();
+    const daysSinceCreation = Math.floor((now - caseDate) / (1000 * 60 * 60 * 24));
+    
+    // تذكير بمتابعة الحالات القديمة (أكثر من 30 يوم)
+    if (daysSinceCreation > 30 && !hasRecentReminder(caseItem.id, 'follow_up')) {
+        showSmartNotification({
+            title: '📋 تذكير متابعة حالة',
+            message: `الحالة "${caseItem.fullName}" تحتاج متابعة (${daysSinceCreation} يوم)`,
+            type: NOTIFICATION_TYPES.REMINDER,
+            priority: 'normal',
+            actions: [
+                { text: 'عرض الحالة', action: () => viewCase(caseItem.id) },
+                { text: 'تأجيل', action: () => snoozeReminder(caseItem.id, 7) }
+            ],
+            data: { caseId: caseItem.id, reminderType: 'follow_up' }
+        });
+        
+        // حفظ أن تم إرسال التذكير
+        markReminderSent(caseItem.id, 'follow_up');
+    }
+    
+    // تذكير بالحالات العاجلة
+    if (caseItem.priority === 'urgent' && !hasRecentReminder(caseItem.id, 'urgent')) {
+        showSmartNotification({
+            title: '🚨 حالة عاجلة تحتاج اهتمام',
+            message: `الحالة العاجلة "${caseItem.fullName}" تحتاج متابعة فورية`,
+            type: NOTIFICATION_TYPES.URGENT,
+            priority: 'urgent',
+            persistent: true,
+            actions: [
+                { text: 'عرض الآن', action: () => viewCase(caseItem.id) },
+                { text: 'اتصال', action: () => callCase(caseItem.id) }
+            ],
+            data: { caseId: caseItem.id, reminderType: 'urgent' }
+        });
+        
+        markReminderSent(caseItem.id, 'urgent');
     }
 }
 
 // ==============================
-// النظام الصوتي للإشعارات
+// إدارة المواعيد والتذكيرات
 // ==============================
-function playNotificationSound(category) {
-    if (!currentNotificationSettings.enableSounds) return;
+function scheduleReminder(reminderData) {
+    const {
+        title,
+        message,
+        datetime,
+        priority = 'normal',
+        repeat = 'none',
+        advanceTime = currentNotificationSettings.reminderAdvanceTime
+    } = reminderData;
+    
+    const reminderId = 'reminder_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const reminderTime = new Date(datetime);
+    const notificationTime = new Date(reminderTime.getTime() - (advanceTime * 60 * 1000));
+    
+    const reminder = {
+        id: reminderId,
+        title,
+        message,
+        datetime: reminderTime.toISOString(),
+        notificationTime: notificationTime.toISOString(),
+        priority,
+        repeat,
+        status: 'active',
+        created: new Date().toISOString()
+    };
+    
+    // حفظ التذكير
+    notificationSystem.reminders.push(reminder);
+    saveNotificationData();
+    
+    // جدولة الإشعار
+    scheduleNotification(reminder);
+    
+    showSmartNotification({
+        title: '⏰ تم جدولة التذكير',
+        message: `سيتم تذكيرك بـ "${title}" في ${formatNotificationTime(reminderTime)}`,
+        type: NOTIFICATION_TYPES.SUCCESS,
+        priority: 'normal'
+    });
+    
+    return reminderId;
+}
+
+function scheduleNotification(reminder) {
+    const now = new Date();
+    const notificationTime = new Date(reminder.notificationTime);
+    const delay = notificationTime.getTime() - now.getTime();
+    
+    if (delay > 0) {
+        const timer = setTimeout(() => {
+            showSmartNotification({
+                title: `⏰ ${reminder.title}`,
+                message: reminder.message,
+                type: NOTIFICATION_TYPES.REMINDER,
+                priority: reminder.priority,
+                actions: [
+                    { text: 'تم', action: () => markReminderComplete(reminder.id) },
+                    { text: 'تأجيل 15 دقيقة', action: () => snoozeReminderById(reminder.id, 15) },
+                    { text: 'تأجيل ساعة', action: () => snoozeReminderById(reminder.id, 60) }
+                ],
+                data: { reminderId: reminder.id }
+            });
+            
+            // إعداد التكرار إذا كان مطلوباً
+            if (reminder.repeat !== 'none') {
+                scheduleRepeatedReminder(reminder);
+            }
+        }, delay);
+        
+        activeTimers.set(`reminder_${reminder.id}`, timer);
+    }
+}
+
+// ==============================
+// التحكم في لوحة الإعدادات
+// ==============================
+function openNotificationPanel() {
+    if (!notificationPanel) {
+        createNotificationControlPanel();
+    }
+    
+    const overlay = notificationPanel.querySelector('.notification-overlay');
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    
+    // تحديث البيانات
+    updateNotificationDashboard();
+    updateRemindersList();
+    updateNotificationHistory();
+}
+
+function closeNotificationPanel() {
+    if (notificationPanel) {
+        const overlay = notificationPanel.querySelector('.notification-overlay');
+        overlay.classList.remove('show');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+function showNotificationTab(tabName) {
+    // إخفاء جميع التبويبات
+    document.querySelectorAll('.notification-tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    document.querySelectorAll('.notification-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // إظهار التبويب المطلوب
+    const targetTab = document.getElementById(tabName + '-tab');
+    const targetBtn = event.target;
+    
+    if (targetTab) {
+        targetTab.classList.add('active');
+        targetBtn.classList.add('active');
+    }
+    
+    // تحديث المحتوى حسب التبويب
+    switch(tabName) {
+        case 'dashboard':
+            updateNotificationDashboard();
+            break;
+        case 'reminders':
+            updateRemindersList();
+            break;
+        case 'appointments':
+            updateAppointmentsList();
+            break;
+        case 'history':
+            updateNotificationHistory();
+            break;
+    }
+}
+
+// ==============================
+// إدارة الإعدادات
+// ==============================
+function updateNotificationSettings() {
+    const settings = {
+        enabled: document.getElementById('setting-enabled')?.checked,
+        browserNotifications: document.getElementById('setting-browser')?.checked,
+        soundNotifications: document.getElementById('setting-sound')?.checked,
+        vibrationEnabled: document.getElementById('setting-vibration')?.checked,
+        autoReminders: document.getElementById('setting-auto-reminders')?.checked,
+        reminderAdvanceTime: parseInt(document.getElementById('setting-advance-time')?.value) || 30,
+        repeatReminders: document.getElementById('setting-repeat')?.checked,
+        soundVolume: parseFloat(document.getElementById('setting-volume')?.value) || 0.7,
+        notificationSound: document.getElementById('setting-sound-type')?.value || 'default',
+        position: document.getElementById('setting-position')?.value || 'top-right',
+        hideDelay: parseInt(document.getElementById('setting-duration')?.value) * 1000 || 5000
+    };
+    
+    // تحديث الإعدادات
+    Object.assign(currentNotificationSettings, settings);
+    
+    // تطبيق التغييرات
+    applyNotificationSettings();
+}
+
+function applyNotificationSettings() {
+    // تحديث موقع حاوية الإشعارات
+    const container = document.getElementById('smart-notifications-container');
+    if (container) {
+        container.className = `notifications-container ${currentNotificationSettings.position}`;
+    }
+    
+    // تحديث عرض مستوى الصوت
+    const volumeDisplay = document.getElementById('volume-display');
+    if (volumeDisplay) {
+        volumeDisplay.textContent = Math.round(currentNotificationSettings.soundVolume * 100) + '%';
+    }
+}
+
+function saveNotificationSettings() {
+    updateNotificationSettings();
     
     try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        localStorage.setItem('charity_notification_settings', JSON.stringify(currentNotificationSettings));
+        localStorage.setItem('charity_notification_data', JSON.stringify(notificationSystem));
         
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        showSmartNotification({
+            title: '💾 تم حفظ الإعدادات',
+            message: 'تم حفظ جميع إعدادات الإشعارات بنجاح',
+            type: NOTIFICATION_TYPES.SUCCESS,
+            priority: 'normal'
+        });
         
-        // أصوات مختلفة حسب الفئة
-        const soundFrequencies = {
-            urgent: [800, 1000, 800],
-            reminder: [600, 800],
-            success: [800, 1200],
-            warning: [400, 600],
-            info: [600],
-            appointment: [900, 700],
-            followup: [700, 900, 700]
+    } catch (error) {
+        console.error('خطأ في حفظ إعدادات الإشعارات:', error);
+        showSmartNotification({
+            title: 'خطأ في الحفظ',
+            message: 'فشل في حفظ الإعدادات',
+            type: NOTIFICATION_TYPES.ERROR,
+            priority: 'high'
+        });
+    }
+}
+
+function loadNotificationSettings() {
+    try {
+        const savedSettings = localStorage.getItem('charity_notification_settings');
+        if (savedSettings) {
+            const parsedSettings = JSON.parse(savedSettings);
+            currentNotificationSettings = { ...DEFAULT_NOTIFICATION_SETTINGS, ...parsedSettings };
+        }
+        
+        const savedData = localStorage.getItem('charity_notification_data');
+        if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            notificationSystem = { ...notificationSystem, ...parsedData };
+        }
+        
+        console.log('✅ تم تحميل إعدادات الإشعارات');
+        
+    } catch (error) {
+        console.error('خطأ في تحميل إعدادات الإشعارات:', error);
+        currentNotificationSettings = { ...DEFAULT_NOTIFICATION_SETTINGS };
+    }
+}
+
+function resetNotificationSettings() {
+    if (confirm('هل أنت متأكد من إعادة تعيين جميع إعدادات الإشعارات؟')) {
+        currentNotificationSettings = { ...DEFAULT_NOTIFICATION_SETTINGS };
+        notificationSystem = {
+            notifications: [],
+            reminders: [],
+            appointments: [],
+            tasks: [],
+            history: []
         };
         
-        const frequencies = soundFrequencies[category] || soundFrequencies.info;
+        updateSettingsForm();
+        applyNotificationSettings();
         
-        let currentTime = audioContext.currentTime;
-        
-        frequencies.forEach((freq, index) => {
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
-            
-            osc.frequency.setValueAtTime(freq, currentTime);
-            osc.type = 'sine';
-            
-            gain.gain.setValueAtTime(0, currentTime);
-            gain.gain.linearRampToValueAtTime(currentNotificationSettings.soundVolume * 0.3, currentTime + 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.01, currentTime + 0.2);
-            
-            osc.start(currentTime);
-            osc.stop(currentTime + 0.2);
-            
-            currentTime += 0.25;
+        showSmartNotification({
+            title: '🔄 تم إعادة التعيين',
+            message: 'تم إعادة تعيين جميع الإعدادات للقيم الافتراضية',
+            type: NOTIFICATION_TYPES.INFO,
+            priority: 'normal'
         });
+    }
+}
+
+// ==============================
+// وظائف مساعدة
+// ==============================
+function updateSettingsForm() {
+    // تحديث قيم النموذج مع الإعدادات الحالية
+    const settings = [
+        'setting-enabled', 'setting-browser', 'setting-sound', 'setting-vibration',
+        'setting-auto-reminders', 'setting-repeat', 'setting-advance-time',
+        'setting-volume', 'setting-sound-type', 'setting-position', 'setting-duration'
+    ];
+    
+    settings.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            const settingKey = id.replace('setting-', '').replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+            
+            if (element.type === 'checkbox') {
+                element.checked = currentNotificationSettings[settingKey] || false;
+            } else if (settingKey === 'duration') {
+                element.value = (currentNotificationSettings.hideDelay || 5000) / 1000;
+            } else {
+                element.value = currentNotificationSettings[settingKey] || '';
+            }
+        }
+    });
+    
+    applyNotificationSettings();
+}
+
+function getDefaultIcon(type) {
+    const icons = {
+        [NOTIFICATION_TYPES.INFO]: '💬',
+        [NOTIFICATION_TYPES.SUCCESS]: '✅',
+        [NOTIFICATION_TYPES.WARNING]: '⚠️',
+        [NOTIFICATION_TYPES.ERROR]: '❌',
+        [NOTIFICATION_TYPES.REMINDER]: '⏰',
+        [NOTIFICATION_TYPES.APPOINTMENT]: '📅',
+        [NOTIFICATION_TYPES.TASK]: '📋',
+        [NOTIFICATION_TYPES.URGENT]: '🚨'
+    };
+    
+    return icons[type] || '📢';
+}
+
+function formatNotificationTime(date) {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    if (diff < 60000) { // أقل من دقيقة
+        return 'الآن';
+    } else if (diff < 3600000) { // أقل من ساعة
+        const minutes = Math.floor(diff / 60000);
+        return `منذ ${minutes} دقيقة`;
+    } else if (diff < 86400000) { // أقل من يوم
+        const hours = Math.floor(diff / 3600000);
+        return `منذ ${hours} ساعة`;
+    } else {
+        return date.toLocaleDateString('ar-EG');
+    }
+}
+
+function playNotificationSound(type) {
+    if (!currentNotificationSettings.soundNotifications) return;
+    
+    try {
+        const soundConfig = NOTIFICATION_SOUNDS[currentNotificationSettings.notificationSound] || NOTIFICATION_SOUNDS.default;
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        if (soundConfig.frequencies) {
+            // صوت متعدد النغمات
+            soundConfig.frequencies.forEach((freq, index) => {
+                setTimeout(() => {
+                    playTone(audioContext, freq, soundConfig.duration / soundConfig.frequencies.length, soundConfig.type);
+                }, index * (soundConfig.duration / soundConfig.frequencies.length));
+            });
+        } else {
+            // صوت واحد
+            const repeat = soundConfig.repeat || 1;
+            for (let i = 0; i < repeat; i++) {
+                setTimeout(() => {
+                    playTone(audioContext, soundConfig.frequency, soundConfig.duration, soundConfig.type);
+                }, i * (soundConfig.duration + 100));
+            }
+        }
         
     } catch (error) {
         console.log('لا يمكن تشغيل الصوت:', error);
     }
 }
 
-// ==============================
-// نظام التذكيرات
-// ==============================
-function addReminder(options) {
-    const reminder = {
-        id: generateReminderId(),
-        title: options.title || 'تذكير',
-        description: options.description || '',
-        dateTime: new Date(options.dateTime),
-        category: options.category || 'reminder',
-        repeatType: options.repeatType || 'none', // none, daily, weekly, monthly, yearly
-        isActive: true,
-        notificationsSent: 0,
-        maxNotifications: currentNotificationSettings.maxReminders,
-        reminderTimes: options.reminderTimes || [24, 1, 0], // ساعات قبل الموعد
-        associatedCaseId: options.caseId || null,
-        createdAt: new Date(),
-        lastTriggered: null
-    };
+function playTone(audioContext, frequency, duration, type = 'sine') {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
     
-    remindersList.push(reminder);
-    updateNotificationPanel();
-    saveNotificationData();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
     
-    showNotification({
-        title: '✅ تم إضافة التذكير',
-        message: `تذكير: ${reminder.title} في ${formatDateTime(reminder.dateTime)}`,
-        category: 'success',
-        autoHide: true
-    });
+    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+    oscillator.type = type;
     
-    return reminder.id;
+    gainNode.gain.setValueAtTime(currentNotificationSettings.soundVolume * 0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + duration / 1000);
 }
 
-function checkReminders() {
-    const now = new Date();
+function showBrowserNotification(title, message, icon) {
+    if (notificationPermission !== 'granted') return;
     
-    remindersList.forEach(reminder => {
-        if (!reminder.isActive) return;
-        
-        const timeDiff = reminder.dateTime.getTime() - now.getTime();
-        const hoursDiff = timeDiff / (1000 * 60 * 60);
-        
-        reminder.reminderTimes.forEach(hours => {
-            // تحقق من وقت التذكير
-            if (Math.abs(hoursDiff - hours) < 0.1 && reminder.notificationsSent < reminder.maxNotifications) {
-                triggerReminder(reminder, hours);
-            }
+    try {
+        const notification = new Notification(title, {
+            body: message,
+            icon: icon || '/favicon.ico',
+            badge: '/favicon.ico',
+            tag: 'charity-notification',
+            requireInteraction: false,
+            silent: true // نستخدم أصواتنا المخصصة
         });
         
-        // تحقق من التكرار
-        if (timeDiff < 0 && reminder.repeatType !== 'none') {
-            scheduleNextRepeat(reminder);
-        }
-    });
-}
-
-function triggerReminder(reminder, hoursBefor) {
-    let message = '';
-    
-    if (hoursBefor === 0) {
-        message = `حان وقت: ${reminder.title}`;
-    } else if (hoursBefor === 1) {
-        message = `تذكير: ${reminder.title} خلال ساعة واحدة`;
-    } else if (hoursBefor < 24) {
-        message = `تذكير: ${reminder.title} خلال ${hoursBefor} ساعة`;
-    } else {
-        const days = Math.floor(hoursBefor / 24);
-        message = `تذكير: ${reminder.title} خلال ${days} يوم`;
-    }
-    
-    showNotification({
-        title: '⏰ تذكير هام',
-        message: message,
-        category: 'reminder',
-        priority: hoursBefor === 0 ? 'high' : 'normal',
-        persistent: hoursBefor === 0,
-        actions: [
-            {
-                id: 'snooze',
-                label: 'تأجيل',
-                class: 'secondary'
-            },
-            {
-                id: 'complete',
-                label: 'تم',
-                class: 'primary'
-            }
-        ],
-        data: { reminderId: reminder.id, hoursBefor }
-    });
-    
-    reminder.notificationsSent++;
-    reminder.lastTriggered = new Date();
-    
-    saveNotificationData();
-}
-
-// ==============================
-// نظام المهام
-// ==============================
-function addTask(options) {
-    const task = {
-        id: generateTaskId(),
-        title: options.title || 'مهمة جديدة',
-        description: options.description || '',
-        priority: options.priority || 'normal', // low, normal, high, urgent
-        status: 'pending', // pending, in-progress, completed, cancelled
-        dueDate: options.dueDate ? new Date(options.dueDate) : null,
-        category: options.category || 'task',
-        assignedTo: options.assignedTo || 'أبو كرار',
-        associatedCaseId: options.caseId || null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        completedAt: null,
-        progress: 0,
-        subtasks: options.subtasks || [],
-        tags: options.tags || []
-    };
-    
-    tasksList.push(task);
-    updateNotificationPanel();
-    saveNotificationData();
-    
-    showNotification({
-        title: '📋 مهمة جديدة',
-        message: `تم إضافة مهمة: ${task.title}`,
-        category: 'info',
-        actions: [
-            {
-                id: 'view-task',
-                label: 'عرض',
-                class: 'primary'
-            }
-        ],
-        data: { taskId: task.id }
-    });
-    
-    return task.id;
-}
-
-function updateTaskStatus(taskId, newStatus, progress = null) {
-    const task = tasksList.find(t => t.id === taskId);
-    if (!task) return false;
-    
-    const oldStatus = task.status;
-    task.status = newStatus;
-    task.updatedAt = new Date();
-    
-    if (progress !== null) {
-        task.progress = Math.max(0, Math.min(100, progress));
-    }
-    
-    if (newStatus === 'completed') {
-        task.completedAt = new Date();
-        task.progress = 100;
-        
-        showNotification({
-            title: '✅ تم إنجاز المهمة',
-            message: `تم إنجاز: ${task.title}`,
-            category: 'success',
-            autoHide: true
-        });
-    }
-    
-    updateNotificationPanel();
-    saveNotificationData();
-    
-    return true;
-}
-
-// ==============================
-// إدارة أحداث الإشعارات
-// ==============================
-function executeNotificationAction(notificationId, actionId) {
-    const notification = activeNotifications.get(notificationId);
-    if (!notification) return;
-    
-    switch (actionId) {
-        case 'snooze':
-            snoozeReminder(notification.data.reminderId);
-            break;
-        case 'complete':
-            completeReminder(notification.data.reminderId);
-            break;
-        case 'view-task':
-            viewTask(notification.data.taskId);
-            break;
-        case 'view-case':
-            viewCase(notification.data.caseId);
-            break;
-        default:
-            console.log('تنفيذ إجراء:', actionId);
-    }
-    
-    dismissNotification(notificationId);
-}
-
-function dismissNotification(notificationId) {
-    const notificationElement = document.getElementById(`notification-${notificationId}`);
-    if (notificationElement) {
-        notificationElement.classList.remove('show');
+        // إغلاق تلقائي بعد 5 ثوان
         setTimeout(() => {
-            if (notificationElement.parentNode) {
-                notificationElement.parentNode.removeChild(notificationElement);
-            }
-        }, 300);
-    }
-    
-    // تحديث البيانات
-    const notification = activeNotifications.get(notificationId);
-    if (notification) {
-        notification.read = true;
-        activeNotifications.delete(notificationId);
-    }
-    
-    updateNotificationBadge();
-    updateNotificationPanel();
-    saveNotificationData();
-}
-
-// ==============================
-// واجهة لوحة الإشعارات
-// ==============================
-function toggleNotificationPanel() {
-    const panel = document.getElementById('notification-panel');
-    if (!panel) return;
-    
-    const overlay = panel.querySelector('.notification-panel-overlay');
-    
-    if (overlay.classList.contains('show')) {
-        closeNotificationPanel();
-    } else {
-        openNotificationPanel();
-    }
-}
-
-function openNotificationPanel() {
-    const panel = document.getElementById('notification-panel');
-    if (!panel) return;
-    
-    const overlay = panel.querySelector('.notification-panel-overlay');
-    overlay.classList.add('show');
-    document.body.style.overflow = 'hidden';
-    
-    updateNotificationPanel();
-}
-
-function closeNotificationPanel() {
-    const panel = document.getElementById('notification-panel');
-    if (!panel) return;
-    
-    const overlay = panel.querySelector('.notification-panel-overlay');
-    overlay.classList.remove('show');
-    document.body.style.overflow = 'auto';
-}
-
-function showNotificationTab(tabName) {
-    // إخفاء جميع التبويبات
-    document.querySelectorAll('.notification-tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    document.querySelectorAll('.notification-tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    // إظهار التبويب المطلوب
-    event.target.classList.add('active');
-    
-    const contentId = tabName === 'all' ? 'all-notifications' :
-                     tabName === 'unread' ? 'unread-notifications' :
-                     tabName === 'reminders' ? 'reminders-notifications' :
-                     'tasks-notifications';
-    
-    document.getElementById(contentId).classList.add('active');
-    
-    updateNotificationPanelContent(tabName);
-}
-
-function updateNotificationPanel() {
-    updateNotificationPanelContent('all');
-    updateNotificationPanelContent('unread');
-    updateNotificationPanelContent('reminders');
-    updateNotificationPanelContent('tasks');
-}
-
-function updateNotificationPanelContent(type) {
-    let targetList, items;
-    
-    switch (type) {
-        case 'all':
-            targetList = document.getElementById('all-notifications-list');
-            items = notificationHistory.slice().reverse();
-            break;
-        case 'unread':
-            targetList = document.getElementById('unread-notifications-list');
-            items = notificationHistory.filter(n => !n.read).reverse();
-            break;
-        case 'reminders':
-            targetList = document.getElementById('reminders-list');
-            items = remindersList.filter(r => r.isActive);
-            break;
-        case 'tasks':
-            targetList = document.getElementById('tasks-list');
-            items = tasksList.filter(t => t.status !== 'completed');
-            break;
-        default:
-            return;
-    }
-    
-    if (!targetList) return;
-    
-    if (items.length === 0) {
-        targetList.innerHTML = `
-            <div class="notification-empty">
-                <i class="fas fa-inbox"></i>
-                <p>لا توجد عناصر</p>
-            </div>
-        `;
-        return;
-    }
-    
-    if (type === 'reminders') {
-        targetList.innerHTML = items.map(reminder => `
-            <div class="notification-list-item ${!reminder.isActive ? 'read' : 'unread'}" onclick="editReminder('${reminder.id}')">
-                <div class="notification-list-title">⏰ ${reminder.title}</div>
-                <div class="notification-list-message">${reminder.description}</div>
-                <div class="notification-list-meta">
-                    <span>${formatDateTime(reminder.dateTime)}</span>
-                    <span class="notification-list-category">${reminder.category}</span>
-                </div>
-            </div>
-        `).join('');
-    } else if (type === 'tasks') {
-        targetList.innerHTML = items.map(task => `
-            <div class="notification-list-item ${task.priority === 'urgent' ? 'urgent' : ''}" onclick="editTask('${task.id}')">
-                <div class="notification-list-title">📋 ${task.title}</div>
-                <div class="notification-list-message">${task.description}</div>
-                <div class="notification-list-meta">
-                    <span>الحالة: ${getTaskStatusLabel(task.status)}</span>
-                    <span class="notification-list-category">${task.priority}</span>
-                </div>
-                ${task.progress > 0 ? `
-                    <div class="notification-progress">
-                        <div class="notification-progress-bar" style="width: ${task.progress}%"></div>
-                    </div>
-                ` : ''}
-            </div>
-        `).join('');
-    } else {
-        targetList.innerHTML = items.map(notification => `
-            <div class="notification-list-item ${notification.read ? 'read' : 'unread'}" onclick="markAsRead('${notification.id}')">
-                <div class="notification-list-title">${notification.title}</div>
-                <div class="notification-list-message">${notification.message}</div>
-                <div class="notification-list-meta">
-                    <span>${formatTimeAgo(notification.timestamp)}</span>
-                    <span class="notification-list-category">${notification.category}</span>
-                </div>
-            </div>
-        `).join('');
-    }
-}
-
-// ==============================
-// تحديث شارة العداد
-// ==============================
-function updateNotificationBadge() {
-    const badge = document.getElementById('notification-badge');
-    if (!badge) return;
-    
-    const unreadCount = notificationHistory.filter(n => !n.read).length;
-    
-    if (unreadCount > 0) {
-        badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-        badge.classList.remove('hidden');
+            notification.close();
+        }, 5000);
         
-        if (unreadCount > 0 && hasUrgentNotifications()) {
-            badge.classList.add('pulse');
-        } else {
-            badge.classList.remove('pulse');
-        }
-    } else {
-        badge.classList.add('hidden');
-        badge.classList.remove('pulse');
+    } catch (error) {
+        console.log('خطأ في إشعار المتصفح:', error);
     }
 }
 
 // ==============================
-// خدمات النظام
+// إضافة الأزرار السريعة
 // ==============================
-function startNotificationServices() {
-    // فحص التذكيرات كل دقيقة
-    reminderCheckInterval = setInterval(checkReminders, 60000);
+function addQuickActionButtons() {
+    // إضافة زر سريع لفتح لوحة التحكم
+    const quickButton = document.createElement('div');
+    quickButton.className = 'notification-quick-button';
+    quickButton.innerHTML = '🔔';
+    quickButton.title = 'مركز الإشعارات والتذكيرات';
+    quickButton.onclick = openNotificationPanel;
     
-    // تنظيف الإشعارات القديمة كل ساعة
-    notificationCleanupInterval = setInterval(cleanupOldNotifications, 3600000);
+    document.body.appendChild(quickButton);
     
-    // فحص المهام المتأخرة كل 30 دقيقة
-    setInterval(checkOverdueTasks, 1800000);
-    
-    console.log('✅ تم بدء خدمات الإشعارات');
-}
-
-function cleanupOldNotifications() {
-    const maxAge = 7 * 24 * 60 * 60 * 1000; // أسبوع
-    const now = new Date().getTime();
-    
-    notificationHistory = notificationHistory.filter(notification => {
-        return (now - notification.timestamp.getTime()) < maxAge;
-    });
-    
-    // حفظ البيانات المنظفة
-    saveNotificationData();
-    
-    console.log('🧹 تم تنظيف الإشعارات القديمة');
-}
-
-function checkOverdueTasks() {
-    const now = new Date();
-    
-    tasksList.forEach(task => {
-        if (task.dueDate && task.status === 'pending' && task.dueDate < now) {
-            showNotification({
-                title: '⚠️ مهمة متأخرة',
-                message: `المهمة "${task.title}" متأخرة عن موعدها`,
-                category: 'warning',
-                priority: 'high',
-                actions: [
-                    {
-                        id: 'view-task',
-                        label: 'عرض المهمة',
-                        class: 'primary'
-                    }
-                ],
-                data: { taskId: task.id }
-            });
+    // إضافة اختصار لوحة المفاتيح
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key === 'N') {
+            e.preventDefault();
+            openNotificationPanel();
         }
     });
 }
 
 // ==============================
-// حفظ وتحميل البيانات
+// وظائف الإجراءات السريعة
+// ==============================
+function createQuickReminder() {
+    showAddReminderForm();
+}
+
+function scheduleAppointment() {
+    showAddAppointmentForm();
+}
+
+function createUrgentAlert() {
+    const message = prompt('اكتب رسالة التنبيه العاجل:');
+    if (message) {
+        showSmartNotification({
+            title: '🚨 تنبيه عاجل',
+            message: message,
+            type: NOTIFICATION_TYPES.URGENT,
+            priority: 'urgent',
+            persistent: true,
+            actions: [
+                { text: 'تم الاطلاع', action: null }
+            ]
+        });
+    }
+}
+
+function testNotificationSystem() {
+    showSmartNotification({
+        title: '🧪 اختبار النظام',
+        message: 'هذا اختبار لنظام الإشعارات. جميع الميزات تعمل بشكل صحيح!',
+        type: NOTIFICATION_TYPES.SUCCESS,
+        priority: 'normal',
+        actions: [
+            { text: 'ممتاز!', action: null },
+            { text: 'اختبار آخر', action: testNotificationSystem }
+        ]
+    });
+}
+
+function testNotificationSound() {
+    playNotificationSound('test');
+}
+
+// ==============================
+// إدارة البيانات
 // ==============================
 function saveNotificationData() {
     try {
-        const data = {
-            settings: currentNotificationSettings,
-            history: notificationHistory.slice(-100), // آخر 100 إشعار
-            reminders: remindersList,
-            tasks: tasksList,
-            events: calendarEvents,
-            lastSaved: new Date().toISOString(),
-            version: '1.0.0'
+        localStorage.setItem('charity_notification_data', JSON.stringify(notificationSystem));
+    } catch (error) {
+        console.error('خطأ في حفظ بيانات الإشعارات:', error);
+    }
+}
+
+function exportNotificationData() {
+    const exportData = {
+        settings: currentNotificationSettings,
+        data: notificationSystem,
+        exportDate: new Date().toISOString(),
+        version: '1.0.0'
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `notification_data_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    showSmartNotification({
+        title: '📤 تم التصدير',
+        message: 'تم تصدير بيانات الإشعارات بنجاح',
+        type: NOTIFICATION_TYPES.SUCCESS,
+        priority: 'normal'
+    });
+}
+
+function importNotificationData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importData = JSON.parse(e.target.result);
+                
+                if (importData.settings) {
+                    currentNotificationSettings = { ...DEFAULT_NOTIFICATION_SETTINGS, ...importData.settings };
+                }
+                
+                if (importData.data) {
+                    notificationSystem = { ...notificationSystem, ...importData.data };
+                }
+                
+                updateSettingsForm();
+                saveNotificationData();
+                
+                showSmartNotification({
+                    title: '📥 تم الاستيراد',
+                    message: 'تم استيراد بيانات الإشعارات بنجاح',
+                    type: NOTIFICATION_TYPES.SUCCESS,
+                    priority: 'normal'
+                });
+                
+            } catch (error) {
+                console.error('خطأ في استيراد البيانات:', error);
+                showSmartNotification({
+                    title: 'خطأ في الاستيراد',
+                    message: 'فشل في قراءة ملف البيانات',
+                    type: NOTIFICATION_TYPES.ERROR,
+                    priority: 'high'
+                });
+            }
         };
         
-        localStorage.setItem('charity_notifications', JSON.stringify(data));
-        console.log('💾 تم حفظ بيانات الإشعارات');
-        
-    } catch (error) {
-        console.error('❌ خطأ في حفظ بيانات الإشعارات:', error);
-    }
-}
-
-function loadNotificationData() {
-    try {
-        const savedData = localStorage.getItem('charity_notifications');
-        if (savedData) {
-            const data = JSON.parse(savedData);
-            
-            if (data.settings) {
-                currentNotificationSettings = { ...DEFAULT_NOTIFICATION_SETTINGS, ...data.settings };
-            }
-            
-            if (data.history) {
-                notificationHistory = data.history.map(item => ({
-                    ...item,
-                    timestamp: new Date(item.timestamp)
-                }));
-            }
-            
-            if (data.reminders) {
-                remindersList = data.reminders.map(item => ({
-                    ...item,
-                    dateTime: new Date(item.dateTime),
-                    createdAt: new Date(item.createdAt),
-                    lastTriggered: item.lastTriggered ? new Date(item.lastTriggered) : null
-                }));
-            }
-            
-            if (data.tasks) {
-                tasksList = data.tasks.map(item => ({
-                    ...item,
-                    createdAt: new Date(item.createdAt),
-                    updatedAt: new Date(item.updatedAt),
-                    dueDate: item.dueDate ? new Date(item.dueDate) : null,
-                    completedAt: item.completedAt ? new Date(item.completedAt) : null
-                }));
-            }
-            
-            if (data.events) {
-                calendarEvents = data.events;
-            }
-            
-            console.log('📥 تم تحميل بيانات الإشعارات');
-        }
-        
-    } catch (error) {
-        console.error('❌ خطأ في تحميل بيانات الإشعارات:', error);
-    }
-}
-
-function startAutoSave() {
-    autoSaveInterval = setInterval(() => {
-        saveNotificationData();
-    }, 30000); // حفظ كل 30 ثانية
-    
-    console.log('🔄 تم بدء الحفظ التلقائي');
-}
-
-// ==============================
-// وظائف مساعدة
-// ==============================
-function generateNotificationId() {
-    return 'notif_' + Date.now() + '_' + (notificationIdCounter++);
-}
-
-function generateReminderId() {
-    return 'reminder_' + Date.now() + '_' + (reminderIdCounter++);
-}
-
-function generateTaskId() {
-    return 'task_' + Date.now() + '_' + (taskIdCounter++);
-}
-
-function generateEventId() {
-    return 'event_' + Date.now() + '_' + (eventIdCounter++);
-}
-
-function formatTimeAgo(date) {
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    
-    if (diffMins < 1) return 'الآن';
-    if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
-    if (diffHours < 24) return `منذ ${diffHours} ساعة`;
-    if (diffDays < 30) return `منذ ${diffDays} يوم`;
-    
-    return date.toLocaleDateString('ar-EG');
-}
-
-function formatDateTime(date) {
-    return date.toLocaleString('ar-EG', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-function getNotificationIcon(category) {
-    const icons = {
-        urgent: '🚨',
-        reminder: '⏰',
-        success: '✅',
-        warning: '⚠️',
-        info: 'ℹ️',
-        appointment: '📅',
-        followup: '📋'
+        reader.readAsText(file);
     };
     
-    return icons[category] || icons.info;
+    input.click();
 }
 
-function getVibrationPattern(priority) {
-    const patterns = {
-        low: [100],
-        normal: [100, 50, 100],
-        high: [200, 100, 200, 100, 200],
-        urgent: [300, 100, 300, 100, 300, 100, 300]
-    };
+// ==============================
+// وظائف مساعدة إضافية
+// ==============================
+function addToNotificationHistory(notificationData) {
+    notificationSystem.history.unshift(notificationData);
     
-    return patterns[priority] || patterns.normal;
-}
-
-function getTaskStatusLabel(status) {
-    const labels = {
-        pending: 'معلقة',
-        'in-progress': 'قيد التنفيذ',
-        completed: 'مكتملة',
-        cancelled: 'ملغية'
-    };
-    
-    return labels[status] || status;
-}
-
-function hasUrgentNotifications() {
-    return notificationHistory.some(n => !n.read && (n.category === 'urgent' || n.priority === 'high'));
-}
-
-function limitVisibleNotifications() {
-    const container = document.getElementById('notification-container');
-    if (!container) return;
-    
-    const notifications = container.querySelectorAll('.notification-item');
-    const maxVisible = currentNotificationSettings.maxVisibleNotifications;
-    
-    if (notifications.length > maxVisible) {
-        for (let i = maxVisible; i < notifications.length; i++) {
-            notifications[i].remove();
-        }
+    // الاحتفاظ بآخر 100 إشعار فقط
+    if (notificationSystem.history.length > currentNotificationSettings.maxHistoryItems) {
+        notificationSystem.history = notificationSystem.history.slice(0, currentNotificationSettings.maxHistoryItems);
     }
-}
-
-// ==============================
-// وظائف إضافية للإدارة
-// ==============================
-function markAllAsRead() {
-    notificationHistory.forEach(notification => {
-        notification.read = true;
-    });
     
-    updateNotificationBadge();
-    updateNotificationPanel();
     saveNotificationData();
+}
+
+function updateNotificationStatistics() {
+    // تحديث إحصائيات لوحة التحكم
+    const totalNotifications = notificationSystem.history.length;
+    const activeReminders = notificationSystem.reminders.filter(r => r.status === 'active').length;
+    const upcomingAppointments = notificationSystem.appointments.filter(a => new Date(a.datetime) > new Date()).length;
+    const urgentItems = notificationSystem.history.filter(h => h.priority === 'urgent').length;
     
-    showNotification({
-        title: '✅ تم تحديد الكل كمقروء',
-        message: 'تم تحديد جميع الإشعارات كمقروءة',
-        category: 'success',
-        autoHide: true
-    });
+    updateElement('total-notifications', totalNotifications);
+    updateElement('active-reminders', activeReminders);
+    updateElement('upcoming-appointments', upcomingAppointments);
+    updateElement('urgent-items', urgentItems);
 }
 
-function clearAllNotifications() {
-    if (confirm('هل أنت متأكد من حذف جميع الإشعارات؟')) {
-        notificationHistory = [];
-        activeNotifications.clear();
-        
-        // مسح الإشعارات المرئية
-        const container = document.getElementById('notification-container');
-        if (container) {
-            container.innerHTML = '';
-        }
-        
-        updateNotificationBadge();
-        updateNotificationPanel();
-        saveNotificationData();
-        
-        showNotification({
-            title: '🗑️ تم مسح الإشعارات',
-            message: 'تم حذف جميع الإشعارات',
-            category: 'info',
-            autoHide: true
-        });
-    }
-}
-
-function markAsRead(notificationId) {
-    const notification = notificationHistory.find(n => n.id === notificationId);
-    if (notification) {
-        notification.read = true;
-        updateNotificationBadge();
-        updateNotificationPanel();
-        saveNotificationData();
+function updateElement(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
     }
 }
 
@@ -1732,155 +2088,52 @@ function markAsRead(notificationId) {
 // إعداد مستمعي الأحداث
 // ==============================
 function setupNotificationEventListeners() {
-    // مستمع للنقر خارج اللوحة لإغلاقها
-    document.addEventListener('click', function(e) {
-        const panel = document.getElementById('notification-panel');
-        const notificationIcon = document.querySelector('.notification-icon-btn');
-        
-        if (panel && panel.querySelector('.notification-panel-overlay').classList.contains('show')) {
-            if (!panel.contains(e.target) && !notificationIcon.contains(e.target)) {
-                closeNotificationPanel();
-            }
-        }
+    // مراقبة تغييرات النظام الرئيسي
+    document.addEventListener('DOMContentLoaded', () => {
+        // تأخير قصير للتأكد من تحميل النظام الرئيسي
+        setTimeout(() => {
+            startSystemMonitoring();
+        }, 2000);
     });
     
-    // مستمع اختصارات لوحة المفاتيح
-    document.addEventListener('keydown', function(e) {
-        // Ctrl + Shift + N لفتح لوحة الإشعارات
-        if (e.ctrlKey && e.shiftKey && e.key === 'N') {
-            e.preventDefault();
-            toggleNotificationPanel();
-        }
-        
-        // Escape لإغلاق لوحة الإشعارات
-        if (e.key === 'Escape') {
-            closeNotificationPanel();
-        }
+    // مراقبة تغيير الصفحة
+    window.addEventListener('beforeunload', () => {
+        saveNotificationData();
     });
+}
+
+function startSystemMonitoring() {
+    console.log('🔍 بدء مراقبة النظام للتذكيرات التلقائية');
     
-    // مستمع تغيير الصفحة لإضافة إشعارات جديدة
-    document.addEventListener('click', function(e) {
-        // مراقبة تغيير الأقسام لإضافة إشعارات ذات صلة
-        if (e.target.classList.contains('nav-item')) {
-            setTimeout(() => {
-                checkSectionNotifications();
-            }, 1000);
-        }
-    });
-    
-    // مراقبة تغيير وضع الصفحة (مرئية/مخفية)
-    document.addEventListener('visibilitychange', function() {
-        if (document.hidden) {
-            // الصفحة مخفية - يمكن تجميع الإشعارات
-            console.log('الصفحة مخفية - وضع الإشعارات الهادئ');
-        } else {
-            // الصفحة مرئية - إظهار الإشعارات المتراكمة
-            console.log('الصفحة مرئية - إظهار الإشعارات');
-        }
-    });
-}
-
-// فحص إشعارات القسم الحالي
-function checkSectionNotifications() {
-    // يمكن إضافة لوجيك لإشعارات خاصة بكل قسم
-    console.log('فحص إشعارات القسم الحالي');
-}
-
-// ==============================
-// إنشاء النوافذ المنبثقة الإضافية
-// ==============================
-function createReminderManagementModal() {
-    // سيتم إضافتها في التحديث القادم
-    console.log('إنشاء نافذة إدارة التذكيرات');
-}
-
-function createTaskManagementModal() {
-    // سيتم إضافتها في التحديث القادم
-    console.log('إنشاء نافذة إدارة المهام');
-}
-
-function createCalendarModal() {
-    // سيتم إضافتها في التحديث القادم
-    console.log('إنشاء نافذة التقويم');
-}
-
-function createNotificationSettingsPanel() {
-    // سيتم إضافتها في التحديث القادم
-    console.log('إنشاء لوحة إعدادات الإشعارات');
-}
-
-// ==============================
-// وظائف النوافذ المنبثقة
-// ==============================
-function showAddReminderModal() {
-    alert('قريباً: نافذة إضافة تذكير جديد');
-}
-
-function showAddTaskModal() {
-    alert('قريباً: نافذة إضافة مهمة جديدة');
-}
-
-function showCalendarModal() {
-    alert('قريباً: نافذة التقويم');
-}
-
-function showNotificationSettings() {
-    alert('قريباً: إعدادات الإشعارات المتقدمة');
-}
-
-function editReminder(reminderId) {
-    alert('قريباً: تحرير التذكير');
-}
-
-function editTask(taskId) {
-    alert('قريباً: تحرير المهمة');
+    // مراقبة دورية كل دقيقة
+    setInterval(() => {
+        checkForAutoReminders();
+    }, 60000);
 }
 
 // ==============================
 // تهيئة النظام عند تحميل الصفحة
 // ==============================
 document.addEventListener('DOMContentLoaded', function() {
-    // تأخير قصير للتأكد من تحميل الملف الرئيسي
+    // تأخير التهيئة للتأكد من تحميل الملف الرئيسي
     setTimeout(() => {
         initializeNotificationSystem();
-    }, 2000);
+    }, 1500);
 });
 
 // ==============================
 // إتاحة الوظائف عالمياً
 // ==============================
-window.notificationSystem = {
-    // الوظائف الأساسية
-    show: showNotification,
-    dismiss: dismissNotification,
-    togglePanel: toggleNotificationPanel,
-    
-    // إدارة التذكيرات
-    addReminder: addReminder,
-    checkReminders: checkReminders,
-    
-    // إدارة المهام
-    addTask: addTask,
-    updateTask: updateTaskStatus,
-    
-    // الإعدادات
+window.smartNotificationSystem = {
+    show: showSmartNotification,
+    hide: hideNotification,
+    openPanel: openNotificationPanel,
+    closePanel: closeNotificationPanel,
+    scheduleReminder: scheduleReminder,
+    test: testNotificationSystem,
     settings: currentNotificationSettings,
-    
-    // الإحصائيات
-    getStats: () => ({
-        totalNotifications: notificationHistory.length,
-        unreadCount: notificationHistory.filter(n => !n.read).length,
-        activeReminders: remindersList.filter(r => r.isActive).length,
-        pendingTasks: tasksList.filter(t => t.status === 'pending').length
-    }),
-    
-    // أدوات المطورين
-    debug: () => ({
-        notifications: notificationHistory,
-        reminders: remindersList,
-        tasks: tasksList,
-        settings: currentNotificationSettings
-    })
+    data: notificationSystem,
+    types: NOTIFICATION_TYPES
 };
 
 // ==============================
@@ -1888,30 +2141,10 @@ window.notificationSystem = {
 // ==============================
 window.addEventListener('error', function(e) {
     if (e.filename && e.filename.includes('smart-notifications')) {
-        console.error('خطأ في نظام الإشعارات:', e.error);
-        
-        // إشعار خطأ للمطور
-        if (window.notificationSystem) {
-            showNotification({
-                title: '⚠️ خطأ في النظام',
-                message: 'حدث خطأ في نظام الإشعارات',
-                category: 'warning',
-                priority: 'normal'
-            });
-        }
+        console.error('خطأ في نظام الإشعارات الذكي:', e.error);
     }
 });
 
-// معالج إغلاق النافذة
-window.addEventListener('beforeunload', function() {
-    saveNotificationData();
-});
-
-// رسالة في وحدة التحكم
-console.log(`
-🔔 نظام الإشعارات والتذكيرات الذكي
-📋 الإصدار: 1.0.0
-⚡ تم التحميل بنجاح
-🎯 استخدم notificationSystem للتحكم البرمجي
-⌨️ Ctrl+Shift+N لفتح لوحة الإشعارات
-`);
+console.log('🔔 تم تحميل نظام الإشعارات والتذكيرات الذكي بنجاح!');
+console.log('💡 استخدم Ctrl+Shift+N لفتح مركز الإشعارات');
+console.log('🚀 استخدم smartNotificationSystem للتحكم البرمجي');
